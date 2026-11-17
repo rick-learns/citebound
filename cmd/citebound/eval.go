@@ -94,6 +94,7 @@ func runEvalAnswers(args []string, stdout, stderr io.Writer) int {
 	answerable := fs.String("answerable", "evals/retrieval.jsonl", "answerable questions: the retrieval set")
 	unanswerable := fs.String("unanswerable", "evals/unanswerable.jsonl", "questions the corpus cannot answer")
 	redteam := fs.String("redteam", "evals/redteam.jsonl", "adversarial prompts")
+	support := fs.String("support", "evals/support-labels.jsonl", "claim-support labels; every verified claim needs one. Empty skips claim support")
 	out := fs.String("out", "", "also write the full report, with every claim, as JSON to this file")
 	af := addAnswererFlags(fs)
 	if err := fs.Parse(args); err != nil {
@@ -119,6 +120,12 @@ func runEvalAnswers(args []string, stdout, stderr io.Writer) int {
 	if sets.RedTeam, err = eval.LoadRedTeamCases(*redteam); err != nil {
 		return fail(fmt.Errorf("%s: %w", *redteam, err))
 	}
+	var labels eval.SupportLabels
+	if *support != "" {
+		if labels, err = eval.LoadSupportLabels(*support); err != nil {
+			return fail(fmt.Errorf("%s: %w", *support, err))
+		}
+	}
 	a, err := af.build()
 	if err != nil {
 		return fail(err)
@@ -141,6 +148,11 @@ func runEvalAnswers(args []string, stdout, stderr io.Writer) int {
 	rep, err := eval.RunAnswers(ctx, p, name, sets, answer.SystemPrompt)
 	if err != nil {
 		return fail(err)
+	}
+	if labels != nil {
+		if err := rep.ScoreSupport(labels); err != nil {
+			return fail(fmt.Errorf("%s: %w", *support, err))
+		}
 	}
 	rep.WriteSummary(stdout)
 	if err := writeJSON(*out, rep); err != nil {

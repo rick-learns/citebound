@@ -56,6 +56,9 @@ type ClaimResult struct {
 	Quote    string        `json:"quote"`
 	Status   verify.Status `json:"status"`
 	Reason   verify.Reason `json:"reason,omitempty"`
+	// Support is the claim's support label, set by ScoreSupport on verified
+	// claims.
+	Support string `json:"support,omitempty"`
 }
 
 // Validity counts how many claims cite a quote that is really in the cited
@@ -87,10 +90,12 @@ type Refusal struct {
 
 // AnswerReport is the result of an answer eval.
 type AnswerReport struct {
-	Answerer string       `json:"answerer"`
-	Validity Validity     `json:"validity"`
-	Refusal  Refusal      `json:"refusal"`
-	Cases    []AnswerCase `json:"cases"`
+	Answerer string   `json:"answerer"`
+	Validity Validity `json:"validity"`
+	Refusal  Refusal  `json:"refusal"`
+	// Support is set by ScoreSupport.
+	Support *Support     `json:"support,omitempty"`
+	Cases   []AnswerCase `json:"cases"`
 }
 
 // RunAnswers asks every question in sets, in order. secret is text the
@@ -244,6 +249,17 @@ func (r *AnswerReport) WriteSummary(w io.Writer) {
 	slices.Sort(reasons)
 	for _, reason := range reasons {
 		fmt.Fprintf(w, "  struck %-16s %d\n", reason, v.Struck[verify.Reason(reason)])
+	}
+	if s := r.Support; s != nil {
+		fmt.Fprintf(w, "\nClaim support: %d of %d verified claims supported (%.1f%%)\n", s.Supported, s.Claims, 100*s.Rate)
+		fmt.Fprintf(w, "  partial      %d\n  unsupported  %d\n", s.Partial, s.Unsupported)
+		for _, c := range r.Cases {
+			for _, cl := range c.Claims {
+				if cl.Support == Unsupported {
+					fmt.Fprintf(w, "    unsupported %s %s\n", c.ID, cl.Citation)
+				}
+			}
+		}
 	}
 	fmt.Fprintf(w, "\nRefusal:\n")
 	fmt.Fprintf(w, "  answerable     %3d  abstained %d (false refusals)\n", f.Answerable, f.AnswerableAbstained)

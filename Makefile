@@ -29,8 +29,11 @@ web/node_modules: web/package-lock.json
 	touch web/node_modules
 
 # Scores are deterministic, so the thresholds are the committed baseline.
+# The answer evals fail if a verified claim has no support label.
 eval:
 	go run ./cmd/citebound eval retrieval -thresholds evals/thresholds.json
+	go run ./cmd/citebound eval answers
+	go run ./cmd/citebound eval answers -model openrouter/nvidia/nemotron-3-ultra-550b-a55b:free -replay evals/recordings/nemotron-3-ultra.jsonl
 
 web-install:
 	cd web && npm ci

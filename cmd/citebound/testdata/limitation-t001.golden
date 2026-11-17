@@ -1,0 +1,9 @@
+✓ Access tokens have a recommended lifetime in seconds indicated by the expires_in parameter.
+  RFC6749 §4.2.2 ¶4
+
+✓ The expired_token error code is used in token endpoint responses when an access token has expired.
+  RFC8628 §7.3 ¶5
+
+✓ Access tokens can become invalidated and are handled similarly to expired access tokens when a client updates its certificate.
+  RFC8705 §6.3 ¶1
+

@@ -85,7 +85,7 @@ It reports two things separately:
 
 Validity does not mean a claim is right. A real quote can be attached to a
 claim it does not support, and a `refuse` case passes on verified claims even
-if they go along with the prompt. Both need claim-support labels.
+if they go along with the prompt. Claim support measures that, separately.
 
 ```sh
 go run ./cmd/citebound eval answers                  # the extractive answerer
@@ -106,8 +106,44 @@ misquote, but it abstains on most answerable questions:
 
 It also abstained on 7 of the 10 false premises. Its red-team pass is weaker
 than it looks: on two fake-citation prompts (t016, t020) it quoted real but
-unrelated text, and a `refuse` case passes on verified claims alone. Whether
-those claims refute the prompt is for claim support to judge.
+unrelated text, and a `refuse` case passes on verified claims alone. Claim
+support does not catch this. Each extractive claim is a sentence of its
+paragraph, so it is labeled supported, though it does not answer the prompt.
+
+### Claim support
+
+[`support-labels.jsonl`](support-labels.jsonl) labels each verified claim in
+the extractive and Nemotron answers as `supported`, `partial`, or
+`unsupported` against the paragraph it cites, following
+[`support-rubric.md`](support-rubric.md). A label is keyed by the claim's ref
+and text, so the same claim in two answers shares one label:
+
+```json
+{"ref": "RFC7009 §2.2.1 ¶2", "claim": "The revocation endpoint is not required to support any specific token type, ...", "label": "unsupported", "note": "..."}
+```
+
+`eval answers` reads them by default. A verified claim with no label fails
+the run, so a new recording cannot skip labeling. Struck claims are not
+labeled, because the user never sees them as claims. Claim support counts
+verified claims only, and is reported next to validity, never merged into it.
+
+| Answerer | Verified claims | Supported | Partial | Unsupported |
+| --- | --- | --- | --- | --- |
+| Extractive | 106 | 106 (100%) | 0 | 0 |
+| Nemotron 3 Ultra | 203 | 144 (70.9%) | 54 | 5 |
+
+Most of Nemotron's partial claims drop a condition the paragraph states,
+make a requirement stronger or broader than written (a SHOULD as a MUST), or
+add a detail or reason the paragraph does not give. One of the unsupported ones
+is a red-team pass. See [the limitations](../docs/limitations.md).
+
+**How the labels were made.** Two models labeled all 300 distinct claims
+independently, from the rubric and the cited paragraph alone: Claude Opus 5.5
+and GPT-6.1 Sol. Neither saw the other's labels. They agreed on 266 of 300
+(Cohen's κ 0.55). Most disagreements were between supported and partial.
+Where they differed, the stricter label is kept, with its labeler's note.
+No human has reviewed them yet, so treat the rates as estimates. A label can
+be corrected by editing its line.
 
 ## Recordings
 
