@@ -375,6 +375,386 @@ body {
   animation: spin 0.9s linear infinite;
 }
 
+.claims {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+/* An abstention withholds the answer; its claims stay visible, but not as the answer.
+   A rule sets them apart rather than fading them, so their text keeps AA contrast. */
+.claims--withheld {
+  border-left: 2px dashed var(--rule-strong);
+  padding-left: 14px;
+}
+
+.claim {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid var(--rule);
+  animation: rise 220ms ease-out;
+}
+.claim:first-child {
+  border-top: 0;
+  padding-top: 4px;
+}
+
+.claim__icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 3px;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.claim--verified .claim__icon {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.claim--struck .claim__icon,
+.claim--unverified .claim__icon {
+  border: 1.5px solid var(--rule-strong);
+  color: var(--muted);
+}
+.claim--pending .claim__icon::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--rule-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+.claim__text {
+  margin: 0;
+  font-family: var(--font-prose);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.claim--pending .claim__text {
+  color: var(--ink-soft);
+}
+.claim--struck .claim__text,
+.claim--unverified .claim__text {
+  color: var(--muted);
+}
+.claim--struck s {
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--muted);
+}
+
+.claim__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.claim--verified .claim__status {
+  color: var(--ink-soft);
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.chip--none {
+  border-style: dashed;
+  font-style: italic;
+}
+.chip--link {
+  border-color: var(--accent);
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+.chip--link:hover {
+  background: var(--accent-soft);
+  text-decoration-color: currentColor;
+}
+.chip--link::after {
+  content: " →";
+}
+
+.notice {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.notice p {
+  margin: 0;
+}
+.notice p + p {
+  margin-top: 6px;
+}
+.notice__icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.notice__title {
+  font-weight: 650;
+  font-size: 1.02rem;
+}
+.notice__detail {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+.notice__detail:empty {
+  display: none;
+}
+.notice--error {
+  border-left: 4px solid var(--accent);
+}
+
+.answer__summary {
+  margin: 20px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.passages {
+  margin-top: 24px;
+  font-size: 0.875rem;
+}
+.passages summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  width: fit-content;
+}
+.passages__list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.passages__list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+.passages__title {
+  color: var(--muted);
+}
+
+/* ---------- Source panel ---------- */
+
+.panel {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.panel__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+.panel__heading {
+  flex: 1;
+  min-width: 0;
+}
+.panel__kicker {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+.panel__title {
+  margin: 2px 0 0;
+  font-family: var(--font-prose);
+  font-size: 1.15rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.panel__section {
+  margin: 6px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.panel__section:empty {
+  display: none;
+}
+.panel__close {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.panel__close:hover {
+  border-color: var(--accent);
+}
+
+.panel__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 20px 20px;
+  overscroll-behavior: contain;
+}
+.panel__status {
+  color: var(--muted);
+  margin: 12px 0;
+}
+.panel__out {
+  margin: 16px 0 0;
+  font-size: 0.875rem;
+}
+.panel__link {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+.para {
+  display: grid;
+  grid-template-columns: 2.4em minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px 0;
+}
+.para__num {
+  padding-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.para__text {
+  margin: 0;
+  font-family: var(--font-prose);
+  font-size: 1rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.para__figure {
+  margin: 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+.para--cited {
+  margin: 4px -12px;
+  padding: 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--accent-soft);
+}
+.para__badge {
+  display: inline-block;
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.para__note {
+  grid-column: 2;
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+mark {
+  background: var(--mark);
+  color: inherit;
+  padding: 0 1px;
+  border-bottom: 2px solid var(--accent);
+}
+
+.panel-backdrop {
+  display: none;
+}
+
+/* Drawer on narrow screens. */
+@media (max-width: 959px) {
+  .panel {
+    position: fixed;
+    inset: 0 0 0 auto;
+    top: 0;
+    width: min(100%, 520px);
+    /* Fill the viewport so the head stays put and .panel__scroll scrolls; without a height the
+       drawer grows with its content, past the bottom of the screen. */
+    align-self: stretch;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+    border-width: 0 0 0 1px;
+    z-index: 20;
+    box-shadow: -12px 0 32px rgb(0 0 0 / 0.18);
+    animation: slide-in 200ms ease-out;
+  }
+  .panel-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: rgb(0 0 0 / 0.35);
+  }
+  /* The backdrop is shown exactly while the panel is a drawer, so the page behind stays still. */
+  html:has(.panel-backdrop:not([hidden])) {
+    overflow: hidden;
+  }
+}
+
 /* ---------- Footer ---------- */
 
 .footer {
