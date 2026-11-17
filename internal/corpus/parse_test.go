@@ -239,6 +239,10 @@ func TestParsePinnedCorpus(t *testing.T) {
 		{Ref{6749, "10.4", 1}, "Authorization servers MAY issue refresh tokens to web application clients and native application clients."},
 		{Ref{7636, "4.2", 3}, "code_challenge = BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))"},
 		{Ref{9700, "2.1.1", 1}, "Clients MUST prevent authorization code injection attacks"},
+		// Line breaks at hyphens: a compound word, a dash, and a suspended hyphen.
+		{Ref{7519, "4.1.7", 1}, `The "jti" value is a case-sensitive string.`},
+		{Ref{8252, "8.2", 2}, "authorization code grant flow -- which can issue refresh tokens -- the more practical option"},
+		{Ref{9110, "17.16.1", 2}, "underlying transport- or session-level connection"},
 	}
 	for _, c := range checks {
 		p := rfcs[c.ref.RFC].Paragraph(c.ref)

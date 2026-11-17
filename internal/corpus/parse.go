@@ -265,12 +265,8 @@ func makeParagraph(block []string) Paragraph {
 	var b strings.Builder
 	for i, l := range block {
 		l = strings.TrimSpace(l)
-		if i > 0 {
-			prev := strings.TrimSpace(block[i-1])
-			// A line that ends in a hyphen was broken at a compound word.
-			if !strings.HasSuffix(prev, "-") || strings.HasSuffix(prev, " -") {
-				b.WriteByte(' ')
-			}
+		if i > 0 && !brokenAtHyphen(strings.TrimSpace(block[i-1]), l) {
+			b.WriteByte(' ')
 		}
 		b.WriteString(l)
 	}
@@ -286,6 +282,25 @@ func isAside(block []string) bool {
 	}
 	return true
 }
+
+// brokenAtHyphen reports whether a line break between prev and next falls
+// inside a hyphenated compound ("client-" / "side"), so the halves join
+// with no space. A double hyphen is a dash ("flow --" / "which"), and a
+// hyphen before "and" or "or" is suspended ("transport-" / "or
+// session-level"); both keep the space.
+func brokenAtHyphen(prev, next string) bool {
+	if !hyphenEnd.MatchString(prev) {
+		return false
+	}
+	r, _ := utf8.DecodeRuneInString(next)
+	if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+		return false
+	}
+	first, _, _ := strings.Cut(next, " ")
+	return first != "and" && first != "or"
+}
+
+var hyphenEnd = regexp.MustCompile(`[\p{L}\p{N}"]-$`)
 
 func dedent(block []string) string {
 	minIndent := -1
