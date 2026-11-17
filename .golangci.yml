@@ -1,0 +1,28 @@
+version: "2"
+run:
+  timeout: 5m
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - gosec
+    - revive
+    - exhaustive
+    - errorlint
+    - bodyclose
+    - misspell
+    - unparam
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: false
+    revive:
+      rules:
+        - name: exported
+          arguments: [disableStutteringCheck]
+  exclusions:
+    presets: [comments, std-error-handling]
+    rules:
+      # Tests build fixtures with literal paths on purpose.
+      - path: _test\.go
+        linters: [gosec]
+formatters:
+  enable: [gofmt, goimports]
