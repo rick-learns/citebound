@@ -19,6 +19,7 @@ const DONE = JSON.stringify({
   inputTokens: 0,
   outputTokens: 0,
   costUsd: 0,
+  budgetExhausted: false,
 });
 
 function streamResponse(chunks: string[], init: ResponseInit = {}): Response {
@@ -60,6 +61,17 @@ describe("parseAskEvent", () => {
     expect(
       parseAskEvent("abstain", '{"code":"too-many-struck","reason":"Too few claims."}'),
     ).toEqual({ type: "abstain", data: { code: "too-many-struck", reason: "Too few claims." } });
+  });
+
+  it("reads budgetExhausted only when it is true", () => {
+    const exhausted = (v: unknown) => {
+      const e = parseAskEvent("done", JSON.stringify({ ...JSON.parse(DONE), budgetExhausted: v }));
+      return e?.type === "done" ? e.data.budgetExhausted : null;
+    };
+    expect(exhausted(true)).toBe(true);
+    expect(exhausted(false)).toBe(false);
+    expect(exhausted("true")).toBe(false);
+    expect(exhausted(undefined)).toBe(false);
   });
 });
 

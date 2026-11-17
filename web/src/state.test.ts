@@ -18,6 +18,7 @@ const DONE: DoneEvent = {
   inputTokens: 0,
   outputTokens: 0,
   costUsd: 0,
+  budgetExhausted: false,
 };
 
 const ABSTAIN = { code: "answerer-abstained", reason: "nothing relevant" };
@@ -135,11 +136,11 @@ describe("reduce", () => {
       { type: "start", question: "q" },
       {
         type: "fail",
-        error: { code: "budget_exhausted", message: "" },
+        error: { code: "rate_limited", message: "" },
       },
     );
     expect(s.phase).toBe("error");
-    expect(s.error?.code).toBe("budget_exhausted");
+    expect(s.error?.code).toBe("rate_limited");
   });
 
   it("aborts, keeping resolved claims and dropping later events", () => {

@@ -51,6 +51,7 @@ func TestRun(t *testing.T) {
 		{name: "serve NaN ask rate", args: []string{"serve", "-dir", "../../corpus", "-ask-rate", "NaN"}, wantCode: 1, wantStderr: "ask rate NaN"},
 		{name: "serve infinite ask rate", args: []string{"serve", "-dir", "../../corpus", "-ask-rate", "+Inf"}, wantCode: 1, wantStderr: "ask rate +Inf"},
 		{name: "serve negative ask rate", args: []string{"serve", "-dir", "../../corpus", "-ask-rate", "-1"}, wantCode: 1, wantStderr: "ask rate -1"},
+		{name: "serve negative daily tokens", args: []string{"serve", "-dir", "../../corpus", "-daily-tokens", "-1"}, wantCode: 1, wantStderr: "daily tokens"},
 		{name: "serve negative in flight", args: []string{"serve", "-dir", "../../corpus", "-max-inflight", "-1"}, wantCode: 1, wantStderr: "max in flight"},
 		{name: "eval answers", args: []string{"eval", "answers", "-dir", "../../corpus", "-answerable", "testdata/eval-answerable.jsonl", "-unanswerable", "testdata/eval-unanswerable.jsonl", "-redteam", "testdata/eval-redteam.jsonl"}, wantCode: 0, wantStdout: "Answerer: extractive"},
 		{name: "eval answers with a missing recording", args: []string{"eval", "answers", "-dir", "../../corpus", "-answerable", "testdata/eval-unrecorded.jsonl", "-unanswerable", "testdata/eval-unanswerable.jsonl", "-redteam", "testdata/eval-redteam.jsonl", "-model", "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free", "-replay", "../../evals/recordings/nemotron-3-ultra.jsonl"}, wantCode: 1, wantStderr: "x001: answer: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free: no recording for this request"},

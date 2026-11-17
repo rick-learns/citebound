@@ -67,6 +67,8 @@ export interface DoneEvent {
   inputTokens: number;
   outputTokens: number;
   costUsd: number;
+  /** The day's model tokens were used up, so the extractive answerer answered instead. */
+  budgetExhausted: boolean;
 }
 
 /**
@@ -203,6 +205,7 @@ export function parseAskEvent(name: string, data: string): AskEvent | null {
           inputTokens: num(o, "inputTokens"),
           outputTokens: num(o, "outputTokens"),
           costUsd: num(o, "costUsd"),
+          budgetExhausted: o["budgetExhausted"] === true,
         },
       };
     case "error":

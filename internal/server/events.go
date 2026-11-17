@@ -128,16 +128,14 @@ func (s *Server) answer(ctx context.Context, stream *eventStream, question strin
 		}
 	}
 	p, mode, model := s.cfg.Pipeline, s.cfg.Mode, s.cfg.Model
-	overBudget := s.budget != nil && s.budget.exhausted()
-	if overBudget {
-		p, mode, model = s.fallback, "extractive", ""
+	overBudget := false
+	if s.budget != nil {
+		p = s.charged
+		if overBudget = s.budget.exhausted(); overBudget {
+			p, mode, model = s.fallback, "extractive", ""
+		}
 	}
 	res, err := p.Ask(ctx, question, emit)
-	// Count the tokens before anything else: the model has used them even if
-	// the client has gone away.
-	if s.budget != nil && res != nil && s.budget.spend(res.InputTokens+res.OutputTokens) {
-		s.cfg.Logger.Warn("daily token budget used up; answering extractively until midnight UTC", "limit", s.cfg.DailyTokens)
-	}
 	if sendErr != nil {
 		return // the client went away
 	}

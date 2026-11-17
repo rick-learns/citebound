@@ -1,47 +1,111 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"math"
 	"sync"
 	"time"
+
+	"github.com/rick-learns/citebound/internal/answer"
+	"github.com/rick-learns/citebound/internal/index"
+	"github.com/rick-learns/citebound/internal/llm"
 )
 
-// budget counts the model tokens answers use each UTC day, so the server can
-// stop calling the model once a day's limit is reached (decision 0011).
-type budget struct {
-	limit int
-	now   func() time.Time
+// reserveTokens is charged to the budget when a model call starts, and kept
+// when the call reports no usable token counts (decision 0011). It is above
+// the 4,096-token reply cap plus the largest prompt recorded, 4,894 tokens.
+const reserveTokens = 10_000
 
-	mu    sync.Mutex
-	day   int64 // days since the Unix epoch, UTC
-	spent int
+// budget counts the model tokens answers use each UTC day, so the server can
+// stop calling the model once a day's limit is reached.
+type budget struct {
+	limit  int
+	now    func() time.Time
+	usedUp func() // called the first time each day an answer falls back
+
+	mu     sync.Mutex
+	day    int64 // days since the Unix epoch, UTC
+	spent  int
+	warned bool
 }
 
-// exhausted reports whether today's tokens have reached the limit.
+// exhausted reports whether today's tokens have reached the limit, so the
+// answer starting now must fall back.
 func (b *budget) exhausted() bool {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.roll()
-	return b.spent >= b.limit
+	if b.spent < b.limit {
+		return false
+	}
+	if !b.warned {
+		b.warned = true
+		if b.usedUp != nil {
+			b.usedUp()
+		}
+	}
+	return true
 }
 
-// spend adds an answer's tokens to today's count. It reports whether they
-// used up the budget, so the server can log that once a day. Negative counts
-// are ignored, and the count saturates rather than overflow.
-func (b *budget) spend(tokens int) (usedUp bool) {
+// reserve charges reserveTokens for a model call starting now, and returns
+// the day charged, for settle.
+func (b *budget) reserve() int64 {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.roll()
-	before := b.spent
-	if tokens > 0 {
-		b.spent += min(tokens, math.MaxInt-b.spent)
+	b.add(reserveTokens)
+	return b.day
+}
+
+// settle replaces the reservation made on day with the tokens the call used.
+// A call that ran past midnight is charged to the new day.
+func (b *budget) settle(day int64, used int) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.roll()
+	if day == b.day {
+		b.spent = max(0, b.spent-reserveTokens)
 	}
-	return before < b.limit && b.spent >= b.limit
+	b.add(used)
+}
+
+// add charges n tokens, saturating rather than overflowing.
+func (b *budget) add(n int) {
+	b.spent += min(max(0, n), math.MaxInt-b.spent)
 }
 
 // roll starts a new count when the UTC day changes.
 func (b *budget) roll() {
 	if d := b.now().Unix() / (24 * 60 * 60); d != b.day {
-		b.day, b.spent = d, 0
+		b.day, b.spent, b.warned = d, 0, false
 	}
+}
+
+// budgeted charges each answer from its answerer to a budget.
+type budgeted struct {
+	answer.Answerer
+	budget *budget
+}
+
+// Answer implements answer.Answerer.
+func (m budgeted) Answer(ctx context.Context, question string, passages []index.Hit) (answer.Reply, error) {
+	day := m.budget.reserve()
+	r, err := m.Answerer.Answer(ctx, question, passages)
+	m.budget.settle(day, charge(r, err))
+	return r, err
+}
+
+// charge is what a call is charged: its reported tokens when the reply has
+// usable counts, and otherwise the reservation. An error, or a reply with
+// counts missing or negative, may still have been billed. A question
+// missing from the recordings never reached a model.
+func charge(r answer.Reply, err error) int {
+	switch {
+	case errors.Is(err, llm.ErrNotRecorded):
+		return 0
+	case err != nil || r.InputTokens < 0 || r.OutputTokens < 0 || r.InputTokens+r.OutputTokens == 0:
+		return reserveTokens
+	}
+	return min(r.InputTokens, math.MaxInt-r.OutputTokens) + r.OutputTokens
 }

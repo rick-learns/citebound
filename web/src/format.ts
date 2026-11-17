@@ -79,11 +79,6 @@ export function friendlyError(error: ErrorInfo): FriendlyError {
         title: "Too many questions",
         hint: "Each visitor can ask a few questions a minute. Wait as long as the message below says, then try again.",
       };
-    case "budget_exhausted":
-      return {
-        title: "Live mode is paused",
-        hint: "The model budget for this deployment is used up. Please try again later.",
-      };
     case "bad_request":
       return {
         title: "That question couldn't be processed",
@@ -125,7 +120,9 @@ export function summaryText(done: DoneEvent): string {
       ? "No claims verified"
       : `${String(done.verified)} of ${String(done.claims)} ${noun} verified`,
     `${String(Math.round(done.latencyMs))} ms`,
-    modeText(done.mode, done.model),
+    done.budgetExhausted
+      ? `${modeText(done.mode, done.model)}, because the model's daily budget is used up`
+      : modeText(done.mode, done.model),
   ];
   const tokens = done.inputTokens + done.outputTokens;
   if (tokens > 0) parts.push(`${tokens.toLocaleString("en-US")} tokens`);

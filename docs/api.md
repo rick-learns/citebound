@@ -21,7 +21,6 @@ Errors outside a stream are JSON with a matching status:
 | `rate_limited` | 429 | The client asked too often. `Retry-After` gives the wait in seconds. See [decision 0010](decisions/0010-rate-limit-and-cap-asks.md). |
 | `unavailable` | 503 | Too many questions are being answered at once (`Retry-After: 5`), or, in a stream, the answer timed out. |
 | `internal` | 500 | The answer failed. |
-| `budget_exhausted` | 503 | Reserved for a daily cost limit. |
 | `not_recorded` | (stream only) | Replay mode has no recorded answer for the question. Only questions that retrieval finds passages for get this far; others are withheld with `no-passages`. |
 
 ## `GET /api/meta`
@@ -56,6 +55,10 @@ Before streaming, a valid request can be refused with `429 rate_limited` or
 sets them with `-ask-rate`, `-ask-burst`, `-max-inflight`, and
 `-client-ip-header`.
 
+A daily token budget, `-daily-tokens`, never refuses a request. Once it is
+used up, questions are answered extractively until midnight UTC, and `done`
+says so ([decision 0011](decisions/0011-daily-token-budget.md)).
+
 The response is `text/event-stream`. Each event is one `event:` line and one
 `data:` line of JSON. Events arrive in this order:
 
@@ -65,7 +68,7 @@ The response is `text/event-stream`. Each event is one `event:` line and one
 | `claim` | `{"id": 0, "text": "...", "ref": "RFC6749 §10.4 ¶1", "quote": "..."}` | Per claim. `ref` is `""` for an uncited claim, or the raw text of a malformed citation. |
 | `verdict` | `{"id": 0, "status": "verified" \| "struck", "reason": ""}` | Right after its claim. Reasons are listed in [the answer format](answer-format.md). |
 | `abstain` | `{"code": "too-many-struck", "reason": "Too few claims could be verified to trust the answer."}` | If the answer is withheld. Codes are listed in [decision 0006](decisions/0006-abstention-policy.md). |
-| `done` | `{"mode", "model", "claims", "verified", "struck", "latencyMs", "inputTokens", "outputTokens", "costUsd"}` | Last, unless an error ended the stream. `inputTokens` and `outputTokens` are what the model reported for this answer: 0 in `extractive` mode, and in `replay` mode the counts recorded with the answer. `costUsd` is not computed yet and is always 0. |
+| `done` | `{"mode", "model", "claims", "verified", "struck", "latencyMs", "inputTokens", "outputTokens", "costUsd", "budgetExhausted"}` | Last, unless an error ended the stream. `mode` and `model` are what answered this question. `inputTokens` and `outputTokens` are what the model reported for this answer: 0 in `extractive` mode, and in `replay` mode the counts recorded with the answer. `costUsd` is not computed yet and is always 0. `budgetExhausted` is `true` when the daily token budget was used up, so `mode` is `extractive` although the server runs a model. |
 | `error` | `{"code": "unavailable", "message": "..."}` | Instead of the remaining events, if answering failed after the stream started. |
 
 When an answer is withheld, its claims and verdicts have already been

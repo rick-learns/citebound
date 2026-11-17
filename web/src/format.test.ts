@@ -63,9 +63,6 @@ describe("format helpers", () => {
     expect(friendlyError({ code: "rate_limited", message: "" }).hint).toMatch(
       /a few questions a minute/u,
     );
-    expect(friendlyError({ code: "budget_exhausted", message: "" }).title).toBe(
-      "Live mode is paused",
-    );
     expect(friendlyError({ code: "incomplete", message: "" }).title).toBe("The answer was cut off");
     expect(friendlyError({ code: "weird", message: "" }).title).toBe("Something went wrong");
   });
@@ -81,6 +78,7 @@ describe("format helpers", () => {
       inputTokens: 0,
       outputTokens: 0,
       costUsd: 0,
+      budgetExhausted: false,
     };
     expect(summaryText(done)).toBe("2 of 3 claims verified · 812 ms · extractive");
     expect(summaryText({ ...done, mode: "model", model: "m-1", costUsd: 0.0021 })).toBe(
@@ -88,6 +86,9 @@ describe("format helpers", () => {
     );
     expect(summaryText({ ...done, inputTokens: 1631, outputTokens: 2110 })).toBe(
       "2 of 3 claims verified · 812 ms · extractive · 3,741 tokens",
+    );
+    expect(summaryText({ ...done, budgetExhausted: true })).toBe(
+      "2 of 3 claims verified · 812 ms · extractive, because the model's daily budget is used up",
     );
     expect(summaryText({ ...done, claims: 0, verified: 0 })).toBe(
       "No claims verified · 812 ms · extractive",

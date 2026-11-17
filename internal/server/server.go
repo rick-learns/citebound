@@ -54,7 +54,8 @@ type Config struct {
 	// DailyTokens caps the model tokens answers use each UTC day, across all
 	// clients (decision 0011). Once it is reached, questions are answered by
 	// the extractive answerer until the day ends. Answers already running
-	// finish, so a day can overshoot by up to MaxInFlight answers.
+	// finish, so a day can overshoot by what they use. Ignored in extractive
+	// mode.
 	DailyTokens int
 }
 
@@ -69,9 +70,9 @@ type Server struct {
 	limits   *limiter
 	inflight chan struct{}
 	budget   *budget
-	// fallback answers once the budget is used up: the same pipeline with
-	// the extractive answerer.
-	fallback *answer.Pipeline
+	// With a budget, charged is the pipeline charging its answers to it, and fallback
+	// answers once it is used up: the same pipeline, extractively.
+	charged, fallback *answer.Pipeline
 }
 
 // New returns a server for cfg.
@@ -95,11 +96,14 @@ func New(cfg Config) (*Server, error) {
 	if cfg.MaxInFlight > 0 {
 		s.inflight = make(chan struct{}, cfg.MaxInFlight)
 	}
-	if cfg.DailyTokens > 0 {
-		s.budget = &budget{limit: cfg.DailyTokens, now: func() time.Time { return s.clock() }}
-		fb := *cfg.Pipeline
+	if cfg.DailyTokens > 0 && cfg.Mode != "extractive" {
+		s.budget = &budget{limit: cfg.DailyTokens, now: func() time.Time { return s.clock() }, usedUp: func() {
+			cfg.Logger.Warn("daily token budget used up; answering extractively until midnight UTC", "limit", cfg.DailyTokens)
+		}}
+		m, fb := *cfg.Pipeline, *cfg.Pipeline
+		m.Answerer = budgeted{cfg.Pipeline.Answerer, s.budget}
 		fb.Answerer = answer.Extractive{}
-		s.fallback = &fb
+		s.charged, s.fallback = &m, &fb
 	}
 	m := metaResponse{Version: cfg.Version, Mode: cfg.Mode, Model: cfg.Model, RFCs: []rfcMeta{}}
 	for _, r := range cfg.RFCs {

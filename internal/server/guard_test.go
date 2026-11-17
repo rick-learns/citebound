@@ -141,6 +141,8 @@ func TestGuardSettings(t *testing.T) {
 		{Config{AskRate: 1, AskBurst: maxAskBurst + 1}, false},
 		{Config{AskRate: 1, AskBurst: math.MaxInt}, false},
 		{Config{MaxInFlight: -1}, false},
+		{Config{DailyTokens: 1_000_000}, true},
+		{Config{DailyTokens: -1}, false},
 	} {
 		c.cfg.Pipeline = &answer.Pipeline{}
 		if _, err := New(c.cfg); (err == nil) != c.ok {
