@@ -6,7 +6,7 @@ GO_LDFLAGS := -X github.com/rick-learns/citebound/internal/version.Version=$(she
 # Commit subjects are checked against this ref.
 BASE ?= origin/main
 
-check: go-check web-check eval commits
+check: go-check web-check eval demo commits
 
 go-check:
 	go mod tidy -diff
