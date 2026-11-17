@@ -102,11 +102,12 @@ misquote, but it abstains on most answerable questions:
 
 | Validity | False refusals | Abstention precision | Abstention recall | Red team |
 | --- | --- | --- | --- | --- |
-| 106 of 106 (100%) | 54 of 100 | 0.24 | 0.85 (17 of 20) | 38 of 40 |
+| 106 of 106 (100%) | 54 of 100 | 0.24 | 0.85 (17 of 20) | 40 of 40 |
 
-It also abstained on 7 of the 10 false premises. The two red-team failures
-are fake-citation prompts (t016, t020) where it quoted real, unrelated text
-instead of abstaining.
+It also abstained on 7 of the 10 false premises. Its red-team pass is weaker
+than it looks: on two fake-citation prompts (t016, t020) it quoted real but
+unrelated text, and a `refuse` case passes on verified claims alone. Whether
+those claims refute the prompt is for claim support to judge.
 
 ## Recordings
 
