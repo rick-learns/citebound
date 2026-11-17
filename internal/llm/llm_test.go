@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -121,6 +122,65 @@ func TestErrors(t *testing.T) {
 		p := map[string]func(string) Provider{"anthropic": anthropicAt, "openai": openAIAt}[name](api.start(t))
 		if _, err := p.Complete(context.Background(), req); !errors.Is(err, ErrEmpty) {
 			t.Errorf("%s empty reply: err = %v, want ErrEmpty", name, err)
+		}
+	}
+}
+
+// echoKey is an httpDoer that fails with the request's credentials in the
+// error, as a misbehaving proxy or custom client might.
+type echoKey struct{ wrap error }
+
+func (e echoKey) Do(r *http.Request) (*http.Response, error) {
+	return nil, fmt.Errorf("proxy refused %s %s: %w", r.Header.Get("x-api-key"), r.Header.Get("Authorization"), e.wrap)
+}
+
+func TestErrorsNeverContainTheAPIKey(t *testing.T) {
+	const key = "sk-secret-123"
+	echo := &fakeAPI{status: 401, reply: `{"error":{"type":"auth_` + key + `","message":"invalid key ` + key + `"}}`}
+	echoURL := echo.start(t)
+	plain := &fakeAPI{status: 500, reply: "bad key " + key}
+	plainURL := plain.start(t)
+	providers := map[string]Provider{
+		"anthropic structured": &Anthropic{APIKey: key, Model: "m", BaseURL: echoURL},
+		"openai structured":    &OpenAI{APIKey: key, Model: "m", BaseURL: echoURL},
+		"anthropic fallback":   &Anthropic{APIKey: key, Model: "m", BaseURL: plainURL},
+		"openai fallback":      &OpenAI{APIKey: key, Model: "m", BaseURL: plainURL},
+		"anthropic transport":  &Anthropic{APIKey: key, Model: "m", Client: echoKey{errors.New("refused")}},
+		"openai transport":     &OpenAI{APIKey: key, Model: "m", Client: echoKey{errors.New("refused")}},
+	}
+	for name, p := range providers {
+		_, err := p.Complete(context.Background(), req)
+		if err == nil {
+			t.Fatalf("%s: no error", name)
+		}
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && (strings.Contains(apiErr.Type, key) || strings.Contains(apiErr.Message, key)) {
+			t.Errorf("%s: APIError fields contain the key: %+v", name, apiErr)
+		}
+		for e := err; e != nil; e = errors.Unwrap(e) {
+			if strings.Contains(e.Error(), key) {
+				t.Errorf("%s: error chain contains the key: %v", name, e)
+			}
+		}
+		if !strings.Contains(err.Error(), "[REDACTED]") {
+			t.Errorf("%s: %v, want a redaction marker", name, err)
+		}
+	}
+
+	// Redaction keeps the deadline error that callers branch on.
+	p := &OpenAI{APIKey: key, Model: "m", Client: echoKey{context.DeadlineExceeded}}
+	if _, err := p.Complete(context.Background(), req); !errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), key) {
+		t.Errorf("deadline: %v", err)
+	}
+}
+
+func TestOversizedResponse(t *testing.T) {
+	big := `{"model":"m","choices":[{"message":{"content":"ok"}}]}` + strings.Repeat(" ", maxResponseBytes) + "garbage"
+	for _, status := range []int{200, 500} {
+		api := &fakeAPI{status: status, reply: big}
+		_, err := openAIAt(api.start(t)).Complete(context.Background(), req)
+		if err == nil || !strings.Contains(err.Error(), "larger than") {
+			t.Errorf("status %d: err = %v, want a size error", status, err)
 		}
 	}
 }

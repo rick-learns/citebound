@@ -54,7 +54,7 @@ func (o *OpenAI) Complete(ctx context.Context, req Request) (*Response, error) {
 		msgs = append([]openAIMessage{{Role: "system", Content: req.System}}, msgs...)
 	}
 	var out openAIResponse
-	err := postJSON(ctx, o.Client, o.Name(), strings.TrimSuffix(cmp.Or(o.BaseURL, "https://api.openai.com/v1"), "/")+"/chat/completions",
+	err := postJSON(ctx, o.Client, o.Name(), strings.TrimSuffix(cmp.Or(o.BaseURL, "https://api.openai.com/v1"), "/")+"/chat/completions", o.APIKey,
 		map[string]string{"Authorization": "Bearer " + o.APIKey},
 		openAIRequest{Model: o.Model, Messages: msgs, MaxCompletionTokens: req.MaxTokens},
 		&out, openAIError)

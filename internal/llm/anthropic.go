@@ -49,7 +49,7 @@ type anthropicResponse struct {
 // Complete implements Provider.
 func (a *Anthropic) Complete(ctx context.Context, req Request) (*Response, error) {
 	var out anthropicResponse
-	err := postJSON(ctx, a.Client, a.Name(), strings.TrimSuffix(cmp.Or(a.BaseURL, "https://api.anthropic.com"), "/")+"/v1/messages",
+	err := postJSON(ctx, a.Client, a.Name(), strings.TrimSuffix(cmp.Or(a.BaseURL, "https://api.anthropic.com"), "/")+"/v1/messages", a.APIKey,
 		map[string]string{"x-api-key": a.APIKey, "anthropic-version": anthropicVersion},
 		anthropicRequest{
 			Model:     a.Model,
