@@ -36,6 +36,8 @@ $ citebound ask "Can a refresh token be bound to a client?"
    apart from whitespace and typographic punctuation. Anything else is
    struck, with a reason. See
    [decision 0005](docs/decisions/0005-exact-quote-verification.md).
+5. **Abstention.** If no claim verifies, or fewer than half do, the answer is
+   withheld. See [decision 0006](docs/decisions/0006-abstention-policy.md).
 
 Verification proves that a quote is real. It does not prove that the quote
 supports the claim; that is what the evals measure.

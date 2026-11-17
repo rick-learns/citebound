@@ -30,6 +30,15 @@ Each claim is checked by `internal/verify` and marked **verified** or
 | `quote-too-short` | The quote is too short to be evidence. |
 | `quote-not-found` | The quote is not in the cited paragraph. |
 
+## Abstention
+
+After verification, the answer is withheld if retrieval found nothing, the
+answerer wrote `INSUFFICIENT_EVIDENCE`, no claim verified, or fewer than half
+of the claims verified. Withheld claims are still shown, marked as withheld.
+See [decision 0006](decisions/0006-abstention-policy.md).
+
+## What verification proves
+
 Verification proves the quote is real. Whether it supports the claim is a
 separate question, measured by the faithfulness eval. See
 [decision 0005](decisions/0005-exact-quote-verification.md).
