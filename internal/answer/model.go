@@ -72,15 +72,15 @@ func (m Model) Request(question string, passages []index.Hit) llm.Request {
 }
 
 // Answer implements Answerer.
-func (m Model) Answer(ctx context.Context, question string, passages []index.Hit) (string, error) {
+func (m Model) Answer(ctx context.Context, question string, passages []index.Hit) (Reply, error) {
 	if len(passages) == 0 {
-		return verify.AbstainMarker, nil
+		return Reply{Text: verify.AbstainMarker}, nil
 	}
 	resp, err := m.Provider.Complete(ctx, m.Request(question, passages))
 	if err != nil {
-		return "", err
+		return Reply{}, err
 	}
-	return unfence(resp.Text), nil
+	return Reply{Text: unfence(resp.Text), InputTokens: resp.InputTokens, OutputTokens: resp.OutputTokens}, nil
 }
 
 // unfence removes a Markdown code fence wrapped around the whole reply, which

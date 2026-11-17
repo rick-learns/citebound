@@ -56,6 +56,8 @@ type Result struct {
 	Verified  int
 	Abstained bool
 	Reason    AbstainReason
+	// The model tokens the answer used; zero without a model.
+	InputTokens, OutputTokens int
 }
 
 // Event reports progress while the pipeline runs, so callers can stream it.
@@ -85,11 +87,12 @@ func (p *Pipeline) Ask(ctx context.Context, question string, emit func(Event)) (
 		return res.abstain(NoPassages), nil
 	}
 
-	text, err := p.Answerer.Answer(ctx, question, hits)
+	reply, err := p.Answerer.Answer(ctx, question, hits)
 	if err != nil {
 		return nil, fmt.Errorf("answer: %w", err)
 	}
-	claims, abstained := verify.ParseAnswer(text)
+	res.InputTokens, res.OutputTokens = reply.InputTokens, reply.OutputTokens
+	claims, abstained := verify.ParseAnswer(reply.Text)
 	for _, c := range claims {
 		emit(Event{Claim: &c})
 		v := verify.Verify(p.Lookup, c)

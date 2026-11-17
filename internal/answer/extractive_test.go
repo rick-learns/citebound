@@ -61,7 +61,7 @@ func TestExtractive(t *testing.T) {
 		lookup[p.Ref.String()] = p.Text
 	}
 
-	got, err := Extractive{}.Answer(context.Background(), "How are refresh tokens rotated for public clients?", passages)
+	got, err := textOf(Extractive{}.Answer(context.Background(), "How are refresh tokens rotated for public clients?", passages))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,11 +82,11 @@ func TestExtractive(t *testing.T) {
 		}
 	}
 
-	one, _ := Extractive{MaxClaims: 1}.Answer(context.Background(), "How are refresh tokens rotated for public clients?", passages)
+	one, _ := textOf(Extractive{MaxClaims: 1}.Answer(context.Background(), "How are refresh tokens rotated for public clients?", passages))
 	if strings.Count(one, "\n") != 0 || !strings.Contains(one, "RFC1 §3 ¶1") {
 		t.Errorf("MaxClaims 1: %q", one)
 	}
-	firstOnly, _ := Extractive{MaxPassages: 1}.Answer(context.Background(), "How are refresh tokens rotated for public clients?", passages)
+	firstOnly, _ := textOf(Extractive{MaxPassages: 1}.Answer(context.Background(), "How are refresh tokens rotated for public clients?", passages))
 	if strings.Contains(firstOnly, "RFC1 §3") {
 		t.Errorf("MaxPassages 1 read the third passage: %q", firstOnly)
 	}
@@ -99,7 +99,7 @@ func TestExtractive(t *testing.T) {
 		`Prevent abuse of a token with [name: "value"] in it.`,
 	} {
 		tricky := []index.Hit{hit("RFC2 §1 ¶1", text, false)}
-		if got, _ := (Extractive{}).Answer(context.Background(), "prevent token abuse", tricky); got != verify.AbstainMarker {
+		if got, _ := textOf((Extractive{}).Answer(context.Background(), "prevent token abuse", tricky)); got != verify.AbstainMarker {
 			t.Errorf("%q: answered %q, want abstain", text, got)
 		}
 	}
@@ -110,16 +110,16 @@ func TestExtractive(t *testing.T) {
 		hit("RFC3 §1 ¶2", "refresh tokens rotate", true),
 		passages[0],
 	}
-	if got, _ := (Extractive{MaxPassages: 1}).Answer(context.Background(), "refresh tokens", figuresFirst); !strings.Contains(got, "RFC1 §1 ¶1") {
+	if got, _ := textOf((Extractive{MaxPassages: 1}).Answer(context.Background(), "refresh tokens", figuresFirst)); !strings.Contains(got, "RFC1 §1 ¶1") {
 		t.Errorf("figures first: %q, want a quote from RFC1 §1 ¶1", got)
 	}
 
 	for _, q := range []string{"What is the capital of France?", "what is the", ""} {
-		if got, _ := (Extractive{}).Answer(context.Background(), q, passages); got != verify.AbstainMarker {
+		if got, _ := textOf((Extractive{}).Answer(context.Background(), q, passages)); got != verify.AbstainMarker {
 			t.Errorf("Answer(%q) = %q, want abstain", q, got)
 		}
 	}
-	if got, _ := (Extractive{}).Answer(context.Background(), "refresh tokens", nil); got != verify.AbstainMarker {
+	if got, _ := textOf((Extractive{}).Answer(context.Background(), "refresh tokens", nil)); got != verify.AbstainMarker {
 		t.Errorf("no passages: %q, want abstain", got)
 	}
 }
@@ -163,7 +163,7 @@ func TestExtractiveAgainstPinnedCorpus(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		answer, err := Extractive{}.Answer(context.Background(), tt.question, hits)
+		answer, err := textOf(Extractive{}.Answer(context.Background(), tt.question, hits))
 		if err != nil {
 			t.Fatal(err)
 		}

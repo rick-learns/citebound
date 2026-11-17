@@ -15,9 +15,10 @@ import (
 
 // scripted is a Provider that returns a fixed reply and keeps the request.
 type scripted struct {
-	reply string
-	err   error
-	got   *llm.Request
+	reply   string
+	in, out int // tokens
+	err     error
+	got     *llm.Request
 }
 
 func (s *scripted) Name() string { return "test/scripted" }
@@ -27,7 +28,7 @@ func (s *scripted) Complete(_ context.Context, req llm.Request) (*llm.Response, 
 	if s.err != nil {
 		return nil, s.err
 	}
-	return &llm.Response{Text: s.reply}, nil
+	return &llm.Response{Text: s.reply, InputTokens: s.in, OutputTokens: s.out}, nil
 }
 
 func TestModelRequest(t *testing.T) {
@@ -123,7 +124,7 @@ func TestModelAnswer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Model{Provider: &scripted{reply: tt.reply}}.Answer(context.Background(), "q", hit)
+			got, err := textOf(Model{Provider: &scripted{reply: tt.reply}}.Answer(context.Background(), "q", hit))
 			if err != nil || got != tt.want {
 				t.Errorf("Answer = %q, %v; want %q", got, err, tt.want)
 			}
@@ -131,12 +132,12 @@ func TestModelAnswer(t *testing.T) {
 	}
 
 	p := &scripted{reply: "unused"}
-	if got, err := (Model{Provider: p}).Answer(context.Background(), "q", nil); got != verify.AbstainMarker || err != nil || p.got != nil {
+	if got, err := textOf((Model{Provider: p}).Answer(context.Background(), "q", nil)); got != verify.AbstainMarker || err != nil || p.got != nil {
 		t.Errorf("no passages: %q, %v, called=%v; want the abstain marker without a model call", got, err, p.got != nil)
 	}
 
 	boom := errors.New("boom")
-	if _, err := (Model{Provider: &scripted{err: boom}}).Answer(context.Background(), "q", hit); !errors.Is(err, boom) {
+	if _, err := textOf((Model{Provider: &scripted{err: boom}}).Answer(context.Background(), "q", hit)); !errors.Is(err, boom) {
 		t.Errorf("provider error: %v", err)
 	}
 }
@@ -159,5 +160,13 @@ func TestModelInPipeline(t *testing.T) {
 	}
 	if res.Abstained {
 		t.Errorf("abstained (%s) with one of two claims verified", res.Reason)
+	}
+}
+
+func TestModelReportsTokens(t *testing.T) {
+	hit := []index.Hit{{Ref: corpus.Ref{RFC: 1, Section: "1", Paragraph: 1}, Text: "x"}}
+	got, err := Model{Provider: &scripted{reply: "```\nA.\n```", in: 7, out: 3}}.Answer(context.Background(), "q", hit)
+	if want := (Reply{Text: "A.", InputTokens: 7, OutputTokens: 3}); err != nil || got != want {
+		t.Errorf("Answer = %+v, %v; want %+v", got, err, want)
 	}
 }

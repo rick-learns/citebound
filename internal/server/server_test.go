@@ -232,7 +232,9 @@ func TestAskAbstains(t *testing.T) {
 // fixed answers with the same text every time.
 type fixed string
 
-func (f fixed) Answer(context.Context, string, []index.Hit) (string, error) { return string(f), nil }
+func (f fixed) Answer(context.Context, string, []index.Hit) (answer.Reply, error) {
+	return answer.Reply{Text: string(f)}, nil
+}
 
 func TestAskStreamsStruckClaims(t *testing.T) {
 	ts := newServer(t, fixed("Tokens never expire. [RFC6749 §10.4 ¶1: \"refresh tokens never expire under any circumstances\"]\nUncited claim."))
@@ -256,7 +258,26 @@ func TestAskStreamsStruckClaims(t *testing.T) {
 
 type failing struct{ err error }
 
-func (f failing) Answer(context.Context, string, []index.Hit) (string, error) { return "", f.err }
+func (f failing) Answer(context.Context, string, []index.Hit) (answer.Reply, error) {
+	return answer.Reply{}, f.err
+}
+
+// metered answers like Extractive, reporting a model's token counts.
+type metered struct{}
+
+func (metered) Answer(ctx context.Context, q string, p []index.Hit) (answer.Reply, error) {
+	r, err := answer.Extractive{}.Answer(ctx, q, p)
+	r.InputTokens, r.OutputTokens = 1631, 2110
+	return r, err
+}
+
+func TestAskReportsTokens(t *testing.T) {
+	_, events := ask(t, newServer(t, metered{}), `{"question":"Can a refresh token be bound to a client?"}`)
+	done := events[len(events)-1]
+	if done.name != "done" || done.data["inputTokens"] != 1631.0 || done.data["outputTokens"] != 2110.0 {
+		t.Errorf("last event = %s %v, want done with 1631 and 2110 tokens", done.name, done.data)
+	}
+}
 
 func TestAskReportsFailures(t *testing.T) {
 	for err, code := range map[error]string{
@@ -278,7 +299,7 @@ func TestAskReportsFailures(t *testing.T) {
 // slow answers after a delay.
 type slow time.Duration
 
-func (d slow) Answer(ctx context.Context, q string, p []index.Hit) (string, error) {
+func (d slow) Answer(ctx context.Context, q string, p []index.Hit) (answer.Reply, error) {
 	time.Sleep(time.Duration(d))
 	return answer.Extractive{}.Answer(ctx, q, p)
 }

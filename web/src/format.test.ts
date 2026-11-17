@@ -86,6 +86,9 @@ describe("format helpers", () => {
     expect(summaryText({ ...done, mode: "model", model: "m-1", costUsd: 0.0021 })).toBe(
       "2 of 3 claims verified · 812 ms · live model m-1 · $0.0021",
     );
+    expect(summaryText({ ...done, inputTokens: 1631, outputTokens: 2110 })).toBe(
+      "2 of 3 claims verified · 812 ms · extractive · 3,741 tokens",
+    );
     expect(summaryText({ ...done, claims: 0, verified: 0 })).toBe(
       "No claims verified · 812 ms · extractive",
     );
