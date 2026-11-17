@@ -38,6 +38,11 @@ func TestRun(t *testing.T) {
 		{name: "ask without question", args: []string{"ask"}, wantCode: 2, wantStderr: "Usage: citebound ask"},
 		{name: "eval retrieval", args: []string{"eval", "retrieval", "-dir", "../../corpus", "-set", "../../evals/retrieval.jsonl", "-thresholds", "../../evals/thresholds.json"}, wantCode: 0, wantStdout: "Above the thresholds"},
 		{name: "eval retrieval below thresholds", args: []string{"eval", "retrieval", "-dir", "../../corpus", "-set", "../../evals/retrieval.jsonl", "-thresholds", "testdata/high-thresholds.json"}, wantCode: 1, wantStderr: "below"},
+		// The cases in docs/limitations.md. If one changes, update the page.
+		{name: "limitation: false claim passes", args: []string{"check", "-dir", "../../corpus", "../../examples/false-claim.txt"}, wantStdout: "✓ Refresh tokens may be sent to resource servers.\n  RFC6749 §1.5 ¶2\n\n1 of 1 claims verified."},
+		{name: "limitation: escaped figure struck", args: []string{"check", "-dir", "../../corpus", "../../examples/escaped-figure.txt"}, wantCode: 1, wantStdout: "struck: quote-not-found\n\n0 of 1 claims verified."},
+		{name: "limitation: cut-off line struck", args: []string{"check", "-dir", "../../corpus", "../../examples/cut-off.txt"}, wantCode: 1, wantStdout: "✗ Applications should protect against such attacks, for example by matching the URL to\n  struck: uncited\n\n1 of 2 claims verified."},
+		{name: "limitation: paraphrase struck", args: []string{"check", "-dir", "../../corpus", "../../examples/paraphrase.txt"}, wantCode: 1, wantStdout: "✗ Authorization codes must expire soon after they are issued.\n  struck: quote-not-found\n\n0 of 1 claims verified."},
 		{name: "check mixed answer", args: []string{"check", "-dir", "../../corpus", "testdata/answer-mixed.txt"}, wantCode: 1, wantStdout: "struck: quote-not-found\n\n✗ Refresh tokens are defined in section 99.\n  struck: unknown-ref\n\n1 of 3 claims verified."},
 		{name: "check verified answer", args: []string{"check", "-dir", "../../corpus", "testdata/answer-verified.txt"}, wantCode: 0, wantStdout: "1 of 1 claims verified."},
 		{name: "check empty answer", args: []string{"check", "-dir", "../../corpus", "testdata/answer-blank.txt"}, wantCode: 1, wantStderr: "no claims in testdata/answer-blank.txt"},
@@ -84,6 +89,27 @@ func TestCheckSizeLimit(t *testing.T) {
 		code := run([]string{"check", "-dir", "../../corpus", "-"}, &out, &errOut)
 		if code != 1 || strings.Contains(errOut.String(), "larger than") != tooLarge {
 			t.Errorf("%d bytes: code %d, stderr %q", size, code, errOut.String())
+		}
+	}
+}
+
+// TestLimitationReplays pins the two real model answers in docs/limitations.md
+// in full: each is shown, not withheld, with its struck line and no notice
+// that it is incomplete. If one changes, update the page.
+func TestLimitationReplays(t *testing.T) {
+	const model = "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+	for golden, question := range map[string]string{
+		"testdata/limitation-r071.golden": "How can I bind the authorization code itself to my DPoP key?",
+		"testdata/limitation-r049.golden": "Is it safe to fetch whatever URL appears in a JWT's jku or x5u header to get the verification key?",
+	} {
+		want, err := os.ReadFile(golden)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var stdout, stderr bytes.Buffer
+		code := run([]string{"ask", "-dir", "../../corpus", "-model", model, "-replay", "../../evals/recordings/nemotron-3-ultra.jsonl", question}, &stdout, &stderr)
+		if code != 0 || stdout.String() != string(want) {
+			t.Errorf("%s: code %d, stderr %q\nstdout:\n%s", golden, code, stderr.String(), stdout.String())
 		}
 	}
 }

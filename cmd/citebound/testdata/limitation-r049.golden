@@ -1,0 +1,6 @@
+✓ Blindly following a "jku" or "x5u" header URL can lead to server-side request forgery (SSRF) attacks.
+  RFC8725 §3.10 ¶2
+
+✗ Applications should protect against such attacks, for example by matching the URL to
+  struck: uncited
+

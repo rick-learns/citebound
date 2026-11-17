@@ -1,0 +1,2 @@
+Blindly following a "jku" or "x5u" header URL can lead to server-side request forgery (SSRF) attacks. [RFC8725 §3.10 ¶2: "Similarly, blindly following a "jku" (JWK set URL) or "x5u" (X.509 URL) header, which may contain an arbitrary URL, could result in server-side request forgery (SSRF) attacks."]
+Applications should protect against such attacks, for example by matching the URL to

@@ -10,7 +10,8 @@ corpus does not support an answer.
 
 The check proves a quote is real, not that it supports the claim beside it: a
 true quote can sit next to a false claim and still pass. See
-[what verification proves](docs/answer-format.md#what-verification-proves).
+[what verification proves](docs/answer-format.md#what-verification-proves)
+and [the limitations](docs/limitations.md), each pinned by a test.
 
 Try it with no API key. Requires Go 1.26 or later, and Node.js 24 for the web
 tests.
