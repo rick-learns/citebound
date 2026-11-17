@@ -162,12 +162,14 @@ func (ix *Index) Search(ctx context.Context, query string, k int) ([]Hit, error)
 var wordPattern = regexp.MustCompile(`[\p{L}\p{N}_]+`)
 
 // stopwords are dropped from queries. Without this, "what is the ..." ranks
-// paragraphs by how often they say "the".
+// paragraphs by how often they say "the". Words that carry meaning in RFCs,
+// such as "as" (authorization server) and the RFC 2119 keywords "should" and
+// "must", are kept.
 var stopwords = map[string]bool{
-	"a": true, "an": true, "and": true, "are": true, "as": true, "at": true, "be": true,
+	"a": true, "an": true, "and": true, "are": true, "at": true, "be": true,
 	"by": true, "can": true, "do": true, "does": true, "for": true, "from": true,
 	"how": true, "i": true, "if": true, "in": true, "is": true, "it": true, "of": true,
-	"on": true, "or": true, "should": true, "that": true, "the": true, "this": true,
+	"on": true, "or": true, "that": true, "the": true, "this": true,
 	"to": true, "what": true, "when": true, "where": true, "which": true, "who": true,
 	"why": true, "with": true, "you": true, "my": true, "we": true, "there": true,
 }

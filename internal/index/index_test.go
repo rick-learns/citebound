@@ -97,6 +97,15 @@ func TestSearchEmptyQuery(t *testing.T) {
 	}
 }
 
+func TestSearchKeepsRFCTerms(t *testing.T) {
+	for _, q := range []string{"AS", "SHOULD", "must"} {
+		hits, err := pinned(t).Search(context.Background(), q, 1)
+		if err != nil || len(hits) == 0 {
+			t.Errorf("Search(%q) = %d hits, %v; want a hit", q, len(hits), err)
+		}
+	}
+}
+
 func TestReferenceListsAreNotIndexed(t *testing.T) {
 	hits, err := pinned(t).Search(context.Background(), "Bradner Key words for use in RFCs to Indicate Requirement Levels", 20)
 	if err != nil {
