@@ -17,6 +17,7 @@ Usage:
 Commands:
   corpus verify   Check the pinned RFC files against their checksums
   corpus stats    Count the sections, paragraphs, and figures parsed from each RFC
+  search          Search the corpus: citebound search <query>
   version         Print the build version
   help            Show this help
 `
@@ -34,6 +35,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case "corpus":
 		return runCorpus(args[1:], stdout, stderr)
+	case "search":
+		return runSearch(args[1:], stdout, stderr)
 	case "version", "--version":
 		fmt.Fprintln(stdout, version.Version)
 		return 0

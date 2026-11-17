@@ -21,6 +21,9 @@ func TestRun(t *testing.T) {
 		{name: "corpus verify", args: []string{"corpus", "verify", "-dir", "../../corpus"}, wantCode: 0, wantStdout: "21 RFCs verified"},
 		{name: "corpus verify missing dir", args: []string{"corpus", "verify", "-dir", "does-not-exist"}, wantCode: 1, wantStderr: "read manifest"},
 		{name: "corpus stats", args: []string{"corpus", "stats", "-dir", "../../corpus"}, wantCode: 0, wantStdout: "Total"},
+		{name: "search", args: []string{"search", "-dir", "../../corpus", "-k", "1", "refresh", "token", "rotation"}, wantCode: 0, wantStdout: "1. RFC"},
+		{name: "search without query", args: []string{"search"}, wantCode: 2, wantStderr: "Usage: citebound search"},
+		{name: "search with only stopwords", args: []string{"search", "-dir", "../../corpus", "what is the"}, wantCode: 1, wantStderr: "no searchable words"},
 		{name: "corpus without subcommand", args: []string{"corpus"}, wantCode: 2, wantStderr: "corpus verify"},
 	}
 	for _, tt := range tests {
