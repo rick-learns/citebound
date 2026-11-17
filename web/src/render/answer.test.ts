@@ -167,6 +167,16 @@ describe("createAnswerView", () => {
     },
   );
 
+  it("keeps the state's claim order when an id goes and comes back", () => {
+    const view = createAnswerView(vi.fn());
+    const both = stream(...verified(0, "A0"), ...verified(1, "A1"));
+    view.update(both);
+    view.update({ ...both, claims: both.claims.slice(1) });
+    view.update(both);
+    const texts = [...view.el.querySelectorAll(".claim__text")].map((p) => p.textContent);
+    expect(texts).toEqual(["A0", "A1"]);
+  });
+
   it("drops the previous question's claims, even without an empty state between", () => {
     const view = createAnswerView(vi.fn());
     view.update(stream(...verified(0, "A0"), ...verified(1, "A1")));

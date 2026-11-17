@@ -146,6 +146,13 @@ export function createAnswerView(onCite: CiteHandler): {
       }
       rendered.set(claim.id, { claim, el: node });
     }
+    // Keep the state's order. Nodes already in place are not moved, so a normal stream, which
+    // only appends, never moves one.
+    list.forEach((claim, i) => {
+      const node = rendered.get(claim.id)?.el;
+      if (node && claims.children[i] !== node)
+        claims.insertBefore(node, claims.children[i] ?? null);
+    });
   }
 
   function update(state: AnswerState): void {
