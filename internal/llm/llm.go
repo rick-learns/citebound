@@ -1,4 +1,5 @@
-// Package llm calls hosted language models through one small interface.
+// Package llm calls hosted language models through one small interface, and
+// records and replays their responses so tests and evals run offline.
 package llm
 
 import (
