@@ -1,0 +1,24 @@
+name: pr-title
+
+# The PR title becomes the squash commit on main, so re-check it whenever it is edited.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check PR title follows Conventional Commits
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|eval)(\([a-z0-9-]+\))?!?: [^ ].{0,99}$'
+          if ! printf '%s\n' "$TITLE" | grep -Eq "$pattern"; then
+            echo "::error::PR title must follow Conventional Commits; it becomes the squash commit on main."
+            exit 1
+          fi
