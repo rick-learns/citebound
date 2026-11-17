@@ -11,6 +11,7 @@ supersedes the old one.
 | [0002](0002-go-backend-typescript-ui.md) | Go backend, TypeScript UI, one SQLite file | Accepted |
 | [0003](0003-review-and-merge-gate.md) | Small PRs, independent review, and a squash-merge gate | Accepted |
 | [0004](0004-pinned-rfc-corpus.md) | Answer only from a pinned corpus of 21 RFCs | Accepted |
+| [0005](0005-exact-quote-verification.md) | Verify citations by exact quote match, per paragraph | Accepted |
 
 ## Writing a record
 
