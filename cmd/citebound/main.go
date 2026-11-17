@@ -16,6 +16,7 @@ Usage:
 
 Commands:
   ask             Answer a question from the corpus: citebound ask <question>
+  check           Check the quotes in an answer: citebound check <file | ->
   corpus verify   Check the pinned RFC files against their checksums
   corpus stats    Count the sections, paragraphs, and figures parsed from each RFC
   eval retrieval  Score search against labeled questions
@@ -38,6 +39,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case "ask":
 		return runAsk(args[1:], stdout, stderr)
+	case "check":
+		return runCheck(args[1:], stdout, stderr)
 	case "corpus":
 		return runCorpus(args[1:], stdout, stderr)
 	case "eval":

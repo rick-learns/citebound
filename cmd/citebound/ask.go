@@ -61,12 +61,16 @@ func runAsk(args []string, stdout, stderr io.Writer) int {
 		}
 		fmt.Fprint(stdout, "\nWithheld claims, for transparency:\n\n")
 	}
-	for _, r := range res.Claims {
+	printClaims(stdout, res.Claims)
+	return 0
+}
+
+func printClaims(w io.Writer, results []verify.Result) {
+	for _, r := range results {
 		if r.Status == verify.Verified {
-			fmt.Fprintf(stdout, "✓ %s\n  %s\n\n", r.Claim.Text, r.Claim.Ref)
+			fmt.Fprintf(w, "✓ %s\n  %s\n\n", r.Claim.Text, r.Claim.Ref)
 		} else {
-			fmt.Fprintf(stdout, "✗ %s\n  struck: %s\n\n", r.Claim.Text, r.Reason)
+			fmt.Fprintf(w, "✗ %s\n  struck: %s\n\n", r.Claim.Text, r.Reason)
 		}
 	}
-	return 0
 }

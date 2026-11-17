@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
 )
@@ -37,6 +38,11 @@ func TestRun(t *testing.T) {
 		{name: "ask without question", args: []string{"ask"}, wantCode: 2, wantStderr: "Usage: citebound ask"},
 		{name: "eval retrieval", args: []string{"eval", "retrieval", "-dir", "../../corpus", "-set", "../../evals/retrieval.jsonl", "-thresholds", "../../evals/thresholds.json"}, wantCode: 0, wantStdout: "Above the thresholds"},
 		{name: "eval retrieval below thresholds", args: []string{"eval", "retrieval", "-dir", "../../corpus", "-set", "../../evals/retrieval.jsonl", "-thresholds", "testdata/high-thresholds.json"}, wantCode: 1, wantStderr: "below"},
+		{name: "check mixed answer", args: []string{"check", "-dir", "../../corpus", "testdata/answer-mixed.txt"}, wantCode: 1, wantStdout: "struck: quote-not-found\n\n✗ Refresh tokens are defined in section 99.\n  struck: unknown-ref\n\n1 of 3 claims verified."},
+		{name: "check verified answer", args: []string{"check", "-dir", "../../corpus", "testdata/answer-verified.txt"}, wantCode: 0, wantStdout: "1 of 1 claims verified."},
+		{name: "check empty answer", args: []string{"check", "-dir", "../../corpus", "testdata/answer-blank.txt"}, wantCode: 1, wantStderr: "no claims in testdata/answer-blank.txt"},
+		{name: "check missing file", args: []string{"check", "nope.txt"}, wantCode: 1, wantStderr: "nope.txt"},
+		{name: "check without file", args: []string{"check"}, wantCode: 2, wantStderr: "Usage: citebound check"},
 		{name: "eval without subcommand", args: []string{"eval"}, wantCode: 2, wantStderr: "Usage: citebound eval retrieval"},
 		{name: "corpus without subcommand", args: []string{"corpus"}, wantCode: 2, wantStderr: "corpus verify"},
 	}
@@ -54,4 +60,18 @@ func TestRun(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCheckStdin(t *testing.T) {
+	for in, want := range map[string]string{
+		"INSUFFICIENT_EVIDENCE\n": "The answer abstains.",
+		`Refresh tokens only go to the authorization server. [RFC6749 §1.5 ¶2: "refresh tokens are intended for use only with authorization servers"]`: "1 of 1 claims verified.",
+	} {
+		stdin = strings.NewReader(in)
+		var out, errOut bytes.Buffer
+		if code := run([]string{"check", "-dir", "../../corpus", "-"}, &out, &errOut); code != 0 || !strings.Contains(out.String(), want) {
+			t.Errorf("check - <%q: code %d, stdout %q, stderr %q", in, code, out.String(), errOut.String())
+		}
+	}
+	stdin = os.Stdin
 }
