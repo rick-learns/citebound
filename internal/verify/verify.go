@@ -81,10 +81,19 @@ func Verify(l Lookup, c Claim) Result {
 	if utf8.RuneCountInString(quote) < MinQuoteRunes || len(strings.Fields(quote)) < MinQuoteWords {
 		return struck(ReasonQuoteTooShort)
 	}
-	if !strings.Contains(Normalize(text), quote) {
+	text = Normalize(text)
+	if !strings.Contains(text, quote) && !strings.Contains(text, unescapeQuotes(quote)) {
 		return struck(ReasonQuoteNotFound)
 	}
 	return Result{Claim: c, Status: Verified}
+}
+
+// unescapeQuotes reads \" as ". Models escape double quotes inside a quote,
+// as in "the \"aud\" claim", even when told not to. Verify tries the quote as
+// written first, because a few RFC examples contain a literal \"; either way
+// the quote must be in the cited paragraph. See decision 0008.
+func unescapeQuotes(s string) string {
+	return strings.ReplaceAll(s, `\"`, `"`)
 }
 
 // VerifyAll checks every claim, in order.

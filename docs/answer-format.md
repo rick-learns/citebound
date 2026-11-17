@@ -30,6 +30,10 @@ Each claim is checked by `internal/verify` and marked **verified** or
 | `quote-too-short` | The quote is too short to be evidence. |
 | `quote-not-found` | The quote is not in the cited paragraph. |
 
+Quotes may contain double quotes, written plainly (`the "aud" claim`) or
+escaped (`the \"aud\" claim`). See
+[decision 0008](decisions/0008-escaped-double-quotes.md).
+
 ## Abstention
 
 After verification, the answer is withheld if retrieval found nothing, the

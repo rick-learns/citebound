@@ -14,6 +14,7 @@ supersedes the old one.
 | [0005](0005-exact-quote-verification.md) | Verify citations by exact quote match, per paragraph | Accepted |
 | [0006](0006-abstention-policy.md) | Abstain unless most claims verify | Accepted |
 | [0007](0007-model-providers-and-replay.md) | Call models over plain HTTP, and replay recordings in CI | Accepted |
+| [0008](0008-escaped-double-quotes.md) | Read an escaped double quote in a quote as a double quote | Accepted |
 
 ## Writing a record
 
