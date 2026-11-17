@@ -123,22 +123,19 @@ func redactor(secret string) func(string) string {
 	return strings.NewReplacer(secret, "[REDACTED]").Replace
 }
 
-// redact prefixes err with the provider name. If err's message contains the
-// secret, the message is redacted and the original error is dropped, so no
-// caller can unwrap it back; only cancellation and deadline errors, which
-// callers branch on, are kept.
+// redact flattens err to its message, with the secret redacted, prefixed by
+// the provider name. The original error is never returned, because a wrapped
+// cause can hold the secret even when the outer message does not. Only
+// cancellation and deadline errors, which callers branch on, are kept, as
+// bare sentinels.
 func redact(provider, secret string, err error) error {
-	msg := err.Error()
-	clean := redactor(secret)(msg)
-	if clean == msg {
-		return fmt.Errorf("%s: %w", provider, err)
-	}
+	msg := redactor(secret)(err.Error())
 	for _, sentinel := range []error{context.Canceled, context.DeadlineExceeded} {
 		if errors.Is(err, sentinel) {
-			return fmt.Errorf("%s: %s (%w)", provider, clean, sentinel)
+			return fmt.Errorf("%s: %s (%w)", provider, msg, sentinel)
 		}
 	}
-	return fmt.Errorf("%s: %s", provider, clean)
+	return fmt.Errorf("%s: %s", provider, msg)
 }
 
 // ErrEmpty is returned when a provider replies with no text.

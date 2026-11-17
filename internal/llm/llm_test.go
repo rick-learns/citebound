@@ -134,6 +134,40 @@ func (e echoKey) Do(r *http.Request) (*http.Response, error) {
 	return nil, fmt.Errorf("proxy refused %s %s: %w", r.Header.Get("x-api-key"), r.Header.Get("Authorization"), e.wrap)
 }
 
+// hiddenKey is an httpDoer whose error message is clean but whose wrapped
+// cause holds the credentials.
+type hiddenKey struct{}
+
+type opaque struct{ cause error }
+
+func (opaque) Error() string   { return "request failed" }
+func (o opaque) Unwrap() error { return o.cause }
+
+func (hiddenKey) Do(r *http.Request) (*http.Response, error) {
+	return nil, opaque{errors.Join(errors.New("key "+r.Header.Get("x-api-key")+r.Header.Get("Authorization")), context.Canceled)}
+}
+
+// chainContains reports whether any error in err's tree mentions s.
+func chainContains(err error, s string) bool {
+	if err == nil {
+		return false
+	}
+	if strings.Contains(err.Error(), s) {
+		return true
+	}
+	switch u := err.(type) { //nolint:errorlint // walking the tree by hand
+	case interface{ Unwrap() []error }:
+		for _, e := range u.Unwrap() {
+			if chainContains(e, s) {
+				return true
+			}
+		}
+	case interface{ Unwrap() error }:
+		return chainContains(u.Unwrap(), s)
+	}
+	return false
+}
+
 func TestErrorsNeverContainTheAPIKey(t *testing.T) {
 	const key = "sk-secret-123"
 	echo := &fakeAPI{status: 401, reply: `{"error":{"type":"auth_` + key + `","message":"invalid key ` + key + `"}}`}
@@ -157,13 +191,22 @@ func TestErrorsNeverContainTheAPIKey(t *testing.T) {
 		if errors.As(err, &apiErr) && (strings.Contains(apiErr.Type, key) || strings.Contains(apiErr.Message, key)) {
 			t.Errorf("%s: APIError fields contain the key: %+v", name, apiErr)
 		}
-		for e := err; e != nil; e = errors.Unwrap(e) {
-			if strings.Contains(e.Error(), key) {
-				t.Errorf("%s: error chain contains the key: %v", name, e)
-			}
+		if chainContains(err, key) {
+			t.Errorf("%s: error tree contains the key: %v", name, err)
 		}
 		if !strings.Contains(err.Error(), "[REDACTED]") {
 			t.Errorf("%s: %v, want a redaction marker", name, err)
+		}
+	}
+
+	// A clean message does not make a key in a wrapped cause safe.
+	for _, p := range []Provider{
+		&Anthropic{APIKey: key, Model: "m", Client: hiddenKey{}},
+		&OpenAI{APIKey: key, Model: "m", Client: hiddenKey{}},
+	} {
+		_, err := p.Complete(context.Background(), req)
+		if err == nil || chainContains(err, key) || !errors.Is(err, context.Canceled) {
+			t.Errorf("%s: hidden cause: %v", p.Name(), err)
 		}
 	}
 
