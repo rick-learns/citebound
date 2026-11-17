@@ -174,6 +174,8 @@ func TestLoadScorecardConfig(t *testing.T) {
 		{`{"answerers": [{"name": "E"}]}`, "answerer 1: name and model are required"},
 		{`{"answerers": [{"name": "M", "model": "openrouter/x"}]}`, "M: a model answerer needs a replay file"},
 		{`{"answerers": [{"name": "E", "model": "extractive", "key": "k"}]}`, "unknown field"},
+		{`{"answerers": [{"name": "E", "model": "extractive"}]} {"answerers": [{"name": "M"}]}`, "more than one JSON value"},
+		{`{"answerers": [{"name": "E", "model": "extractive"}]} garbage`, "more than one JSON value"},
 	} {
 		if _, err := loadScorecardConfig(write(tt.config)); err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 			t.Errorf("%s: err = %v, want %q", tt.config, err, tt.wantErr)

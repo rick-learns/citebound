@@ -222,6 +222,9 @@ func loadScorecardConfig(path string) (scorecardConfig, error) {
 	if err := dec.Decode(&c); err != nil {
 		return c, fmt.Errorf("%s: %w", path, err)
 	}
+	if dec.Decode(&struct{}{}) != io.EOF {
+		return c, fmt.Errorf("%s: more than one JSON value", path)
+	}
 	if len(c.Answerers) == 0 {
 		return c, fmt.Errorf("%s: no answerers", path)
 	}
