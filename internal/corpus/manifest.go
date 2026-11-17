@@ -28,7 +28,12 @@ type Document struct {
 
 // LoadManifest reads manifest.json from the corpus directory.
 func LoadManifest(dir string) (*Manifest, error) {
-	data, err := os.ReadFile(filepath.Join(dir, "manifest.json"))
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest: %w", err)
+	}
+	defer root.Close()
+	data, err := root.ReadFile("manifest.json")
 	if err != nil {
 		return nil, fmt.Errorf("read manifest: %w", err)
 	}
@@ -61,9 +66,15 @@ var ErrChecksum = errors.New("checksum mismatch")
 // Verify checks every file in the manifest against its pinned checksum.
 // It reports all failures, not just the first.
 func (m *Manifest) Verify(dir string) error {
+	// os.Root keeps every read inside dir, whatever the manifest says.
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return fmt.Errorf("open corpus: %w", err)
+	}
+	defer root.Close()
 	var errs []error
 	for _, d := range m.Documents {
-		data, err := os.ReadFile(filepath.Join(dir, d.File))
+		data, err := root.ReadFile(d.File)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("RFC %d: %w", d.Number, err))
 			continue
