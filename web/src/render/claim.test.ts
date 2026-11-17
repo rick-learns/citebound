@@ -40,6 +40,22 @@ describe("renderClaim", () => {
     );
   });
 
+  it("renders a claim the stream cut off as not verified, with no chip", () => {
+    const li = renderClaim(claim({ status: "unverified" }), vi.fn());
+    expect(li.querySelector("button")).toBeNull();
+    expect(li.querySelector(".claim__status")?.textContent).toBe(
+      "Not verified: the answer stopped first",
+    );
+  });
+
+  it("gives no chip to a verified claim whose ref is invalid", () => {
+    for (const ref of ["RFC0 §1 ¶1", "RFC6749 §10.4 ¶0", "RFC6749 §10.4"]) {
+      const li = renderClaim(claim({ status: "verified", ref }), vi.fn());
+      expect(li.querySelector("button"), ref).toBeNull();
+      expect(li.querySelector(".chip")?.textContent).toBe(ref);
+    }
+  });
+
   it("renders a struck claim struck through, with the reason in words", () => {
     const li = renderClaim(claim({ status: "struck", reason: "quote-not-found" }), vi.fn());
     expect(li.querySelector(".claim__text s")?.textContent).toBe(

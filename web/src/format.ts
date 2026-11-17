@@ -9,11 +9,18 @@ export interface RefParts {
 // The same pattern as internal/corpus ParseRef.
 const REF_RE = /^RFC ?(\d+) §([0-9A-Za-z.]+?) ¶(\d+)$/u;
 
+const isPositiveInt = (n: number): boolean => Number.isSafeInteger(n) && n > 0;
+
 /** Parses "RFC6749 §10.4 ¶1"; returns null for "" or anything malformed. */
 export function parseRef(ref: string): RefParts | null {
   const m = REF_RE.exec(ref);
   if (!m?.[1] || !m[2] || !m[3]) return null;
-  return { rfc: Number(m[1]), section: m[2], paragraph: Number(m[3]) };
+  const rfc = Number(m[1]);
+  const paragraph = Number(m[3]);
+  // Go rejects zero and numbers past int64. Past 2^53, this rejects what Go would accept: no RFC
+  // is that large, and a rejected ref only loses its chip.
+  if (!isPositiveInt(rfc) || !isPositiveInt(paragraph)) return null;
+  return { rfc, section: m[2], paragraph };
 }
 
 /**

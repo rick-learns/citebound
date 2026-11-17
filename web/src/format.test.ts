@@ -24,6 +24,10 @@ describe("parseRef", () => {
       "RFC6749  §1 ¶1",
       " RFC6749 §1 ¶1",
       "RFC6749 §1-2 ¶1",
+      "RFC0 §1 ¶1",
+      "RFC6749 §10.4 ¶0",
+      `RFC${"9".repeat(400)} §1 ¶1`,
+      "RFC6749 §1 ¶9007199254740993",
     ];
     for (const ref of bad) {
       expect(parseRef(ref), ref).toBeNull();
