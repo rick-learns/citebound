@@ -16,6 +16,7 @@ Usage:
 
 Commands:
   corpus verify   Check the pinned RFC files against their checksums
+  corpus stats    Count the sections, paragraphs, and figures parsed from each RFC
   version         Print the build version
   help            Show this help
 `
