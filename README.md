@@ -50,11 +50,13 @@ Requires Go 1.26 or later.
 go run ./cmd/citebound ask "Should access tokens be sent in the URI query?"
 go run ./cmd/citebound search "DPoP proof nonce"
 go run ./cmd/citebound corpus stats
+go run ./cmd/citebound serve   # HTTP API on 127.0.0.1:8080
 ```
 
 ## Documentation
 
 - [Answer format](docs/answer-format.md)
+- [HTTP API](docs/api.md)
 - [Decision records](docs/decisions/README.md)
 - [Corpus and parsing](corpus/README.md)
 - [Contributing](CONTRIBUTING.md) and [security policy](SECURITY.md)

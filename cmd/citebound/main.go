@@ -18,6 +18,7 @@ Commands:
   ask             Answer a question from the corpus: citebound ask <question>
   corpus verify   Check the pinned RFC files against their checksums
   corpus stats    Count the sections, paragraphs, and figures parsed from each RFC
+  serve           Serve the HTTP API on 127.0.0.1:8080
   search          Search the corpus: citebound search <query>
   version         Print the build version
   help            Show this help
@@ -38,6 +39,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runAsk(args[1:], stdout, stderr)
 	case "corpus":
 		return runCorpus(args[1:], stdout, stderr)
+	case "serve":
+		return runServe(args[1:], stdout, stderr)
 	case "search":
 		return runSearch(args[1:], stdout, stderr)
 	case "version", "--version":
