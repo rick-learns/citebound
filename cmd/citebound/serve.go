@@ -65,7 +65,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		Model:   a.model,
 		RFCs:    rfcs,
 		Pipeline: &answer.Pipeline{
-			Index: ix, Lookup: verify.NewCorpusLookup(rfcs), Answerer: a, Policy: answer.DefaultPolicy,
+			Index: ix, Lookup: verify.NewCorpusLookup(rfcs), Answerer: a.Answerer, Policy: answer.DefaultPolicy,
 		},
 		Logger:         log,
 		AskRate:        *askRate,

@@ -271,6 +271,9 @@ func (metered) Answer(ctx context.Context, q string, p []index.Hit) (answer.Repl
 	return r, err
 }
 
+// Request lets a daily token budget size metered's calls, as for a model.
+func (metered) Request(q string, p []index.Hit) llm.Request { return answer.Model{}.Request(q, p) }
+
 func TestAskReportsTokens(t *testing.T) {
 	_, events := ask(t, newServer(t, metered{}), `{"question":"Can a refresh token be bound to a client?"}`)
 	done := events[len(events)-1]

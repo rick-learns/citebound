@@ -28,19 +28,23 @@ has no effect in extractive mode.
   `done` reports `"mode": "extractive"` and `"budgetExhausted": true`, and
   the web summary says why. The `budget_exhausted` error code, reserved until
   now, is dropped: no request is refused for budget.
-- **Reserve, then settle.** Each model call is charged 10,000 tokens when it
-  starts. That is more than any answer uses: the 4,096-token reply cap plus
-  the largest prompt recorded, 4,894 tokens. When the call returns usable
-  counts, the charge is replaced by them. Otherwise the reservation stays:
+- **Reserve, then settle.** Each model call is charged an upper bound on its
+  tokens when it starts: the prompt's length in bytes, plus the reply cap
+  (4,096 tokens, hidden reasoning included), plus 100 for framing. No
+  byte-level tokenizer makes a token of less than one byte, so a prompt
+  never has more tokens than bytes. When the call returns usable counts,
+  the charge is replaced by them. Otherwise the reservation stays:
   - the call failed, whatever the reason;
   - the reply had no counts, or a negative one.
 
   A replay miss is the exception: no model was called, so it is charged
-  nothing.
+  nothing. The bound needs the exact request, so the server refuses to
+  enable a budget unless its answerer can report the request, as
+  `answer.Model` does.
 - **Running answers finish.** The check is made when an answer starts, and
   calls in flight count through their reservations. So a day overshoots only
   by the last answers that started under the limit: at most one answer per
-  in-flight slot, or about 80,000 tokens at the default cap of 8.
+  in-flight slot (8 by default), each within its reservation.
 - The first time each day the limit is reached, the server logs a warning.
 - Counts saturate instead of overflowing, so a huge reported count uses up
   the day rather than wrapping around.
@@ -62,6 +66,11 @@ has no effect in extractive mode.
 - **Refuse with `budget_exhausted`.** Simpler, but the demo would stop
   answering for the rest of the day. Falling back costs nothing, since the
   extractive answerer needs no model.
+- **A fixed reservation.** The first version reserved 10,000 tokens, above
+  every recorded answer. But a long question can retrieve large figures:
+  one valid question sends about 9,500 input tokens, so a run of billed
+  failures would each be undercharged. Sizing the bound from the request
+  holds for any question.
 - **Count only reported tokens.** Calls that fail or lose their counts would
   be free, so the breaker could be bypassed by exactly the replies most
   likely to be billed without use.

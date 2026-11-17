@@ -97,11 +97,15 @@ func New(cfg Config) (*Server, error) {
 		s.inflight = make(chan struct{}, cfg.MaxInFlight)
 	}
 	if cfg.DailyTokens > 0 && cfg.Mode != "extractive" {
+		ma, ok := cfg.Pipeline.Answerer.(modelAnswerer)
+		if !ok {
+			return nil, errors.New("server: a daily token budget needs an answerer that reports its model requests, such as answer.Model")
+		}
 		s.budget = &budget{limit: cfg.DailyTokens, now: func() time.Time { return s.clock() }, usedUp: func() {
 			cfg.Logger.Warn("daily token budget used up; answering extractively until midnight UTC", "limit", cfg.DailyTokens)
 		}}
 		m, fb := *cfg.Pipeline, *cfg.Pipeline
-		m.Answerer = budgeted{cfg.Pipeline.Answerer, s.budget}
+		m.Answerer = budgeted{ma, s.budget}
 		fb.Answerer = answer.Extractive{}
 		s.charged, s.fallback = &m, &fb
 	}
