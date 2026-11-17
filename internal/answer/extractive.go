@@ -9,6 +9,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/rick-learns/citebound/internal/corpus"
 	"github.com/rick-learns/citebound/internal/index"
 	"github.com/rick-learns/citebound/internal/verify"
 )
@@ -24,8 +25,8 @@ type Answerer interface {
 // the most words of the question. It needs no model and no network, so it
 // powers the keyless demo and is the baseline every model is compared with.
 //
-// Each claim is a sentence quoted verbatim, so every claim it makes passes
-// verification. What it cannot do is decide whether a sentence answers the
+// Each claim is a sentence quoted verbatim, and a sentence is only quoted if
+// the claim passes verification. What it cannot do is decide whether a sentence answers the
 // question; that is what the evals measure.
 type Extractive struct {
 	// MaxClaims caps the number of sentences quoted. Zero means 3.
@@ -52,19 +53,22 @@ func (e Extractive) Answer(_ context.Context, question string, passages []index.
 		return verify.AbstainMarker, nil
 	}
 
-	// The best sentence of each passage that covers enough of the question.
+	// The best sentence of each of the first maxPassages prose passages that
+	// covers enough of the question.
 	var picks []candidate
-	for i, p := range passages[:min(len(passages), maxPassages)] {
+	read := 0
+	for i, p := range passages {
+		if read == maxPassages {
+			break
+		}
 		if p.Figure {
 			continue // figures are evidence, but not sentences to quote as claims
 		}
+		read++
 		best := candidate{}
 		for _, s := range Sentences(p.Text) {
 			s = trimListMarker(s)
-			if !quotable(s) {
-				continue
-			}
-			if n := coverage(s, terms); n >= need && n > best.covered {
+			if n := coverage(s, terms); n >= need && n > best.covered && survives(p, s) {
 				best = candidate{sentence: s, passage: i, covered: n}
 			}
 		}
@@ -118,12 +122,26 @@ func trimListMarker(s string) string {
 	return s
 }
 
-// quotable reports whether s is long enough to verify and safe to put in the
-// answer format, which is one line per claim.
-func quotable(s string) bool {
-	return utf8.RuneCountInString(s) >= verify.MinQuoteRunes &&
-		len(strings.Fields(s)) >= verify.MinQuoteWords &&
-		!strings.ContainsAny(s, "\n\r")
+// survives reports whether quoting sentence s from passage p gives a claim
+// that parses back unchanged and verifies. Checking with the verifier itself,
+// rather than re-deriving its rules, keeps the promise that every extractive
+// claim verifies: a sentence that is too short after normalization, or that
+// contains text like [name: "value"] that the answer format would misread,
+// is never quoted.
+func survives(p index.Hit, s string) bool {
+	c := verify.Claim{Text: s, Ref: p.Ref, Quote: s}
+	parsed, ok := verify.ParseLine(verify.Format(c))
+	if !ok || parsed.Text != s || parsed.Quote != s || parsed.Ref != p.Ref {
+		return false
+	}
+	return verify.Verify(passageLookup{p}, parsed).Status == verify.Verified
+}
+
+// passageLookup serves the text of one passage to the verifier.
+type passageLookup struct{ p index.Hit }
+
+func (l passageLookup) Paragraph(ref corpus.Ref) (string, bool) {
+	return l.p.Text, ref == l.p.Ref
 }
 
 func coverage(sentence string, terms []string) int {

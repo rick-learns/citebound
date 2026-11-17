@@ -91,6 +91,29 @@ func TestExtractive(t *testing.T) {
 		t.Errorf("MaxPassages 1 read the third passage: %q", firstOnly)
 	}
 
+	// Sentences the verifier or the answer format would reject are never
+	// quoted: too short once the trailing period is ignored, and one with
+	// text the format would read as a citation.
+	for _, text := range []string{
+		"Prevent token abuse.",
+		`Prevent abuse of a token with [name: "value"] in it.`,
+	} {
+		tricky := []index.Hit{hit("RFC2 §1 ¶1", text, false)}
+		if got, _ := (Extractive{}).Answer(context.Background(), "prevent token abuse", tricky); got != verify.AbstainMarker {
+			t.Errorf("%q: answered %q, want abstain", text, got)
+		}
+	}
+
+	// Figures do not use up the passage budget.
+	figuresFirst := []index.Hit{
+		hit("RFC3 §1 ¶1", "refresh tokens rotate", true),
+		hit("RFC3 §1 ¶2", "refresh tokens rotate", true),
+		passages[0],
+	}
+	if got, _ := (Extractive{MaxPassages: 1}).Answer(context.Background(), "refresh tokens", figuresFirst); !strings.Contains(got, "RFC1 §1 ¶1") {
+		t.Errorf("figures first: %q, want a quote from RFC1 §1 ¶1", got)
+	}
+
 	for _, q := range []string{"What is the capital of France?", "what is the", ""} {
 		if got, _ := (Extractive{}).Answer(context.Background(), q, passages); got != verify.AbstainMarker {
 			t.Errorf("Answer(%q) = %q, want abstain", q, got)
