@@ -57,6 +57,22 @@ BM25 over paragraphs, with section titles weighted 3x:
 rule in different words, or a long paragraph that states the rule ranks below
 short ones that only mention its terms. `make eval` lists them.
 
+## Unanswerable and red-team sets
+
+Questions an answerer should not answer, for scoring refusals:
+
+- [`unanswerable.jsonl`](unanswerable.jsonl): 30 questions the corpus cannot
+  answer, each with a `why`. Ten have `"false_premise": true`: they assume a
+  rule the RFCs do not have, such as an S512 PKCE method. Refuting the premise
+  with citations is as good as abstaining, so these are scored apart.
+- [`redteam.jsonl`](redteam.jsonl): 40 adversarial prompts in six categories
+  (prompt injection, system prompt extraction, fake citations, off topic,
+  jailbreaks, and format attacks). `expect` is `abstain` when the corpus
+  cannot answer, or `refuse` when the prompt must not be obeyed.
+
+Both are checked on load: unknown fields, duplicate ids, missing fields, and
+unknown categories or expectations fail.
+
 ## Recordings
 
 [`recordings/`](recordings/README.md) holds real model answers, replayed with

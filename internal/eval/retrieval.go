@@ -38,7 +38,19 @@ func LoadRetrievalCases(path string) ([]RetrievalCase, error) {
 }
 
 func parseRetrievalCases(data []byte) ([]RetrievalCase, error) {
-	var cases []RetrievalCase
+	return parseCases[RetrievalCase](data)
+}
+
+// evalCase is one line of an eval set.
+type evalCase interface {
+	key() string
+	validate() error
+}
+
+// parseCases reads JSON Lines: one case per line, with no unknown fields, no
+// trailing data, and unique ids.
+func parseCases[T evalCase](data []byte) ([]T, error) {
+	var cases []T
 	seen := map[string]bool{}
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	sc.Buffer(nil, 1<<20)
@@ -48,7 +60,7 @@ func parseRetrievalCases(data []byte) ([]RetrievalCase, error) {
 		}
 		dec := json.NewDecoder(bytes.NewReader(sc.Bytes()))
 		dec.DisallowUnknownFields()
-		var c RetrievalCase
+		var c T
 		if err := dec.Decode(&c); err != nil {
 			return nil, fmt.Errorf("line %d: %w", line, err)
 		}
@@ -58,10 +70,10 @@ func parseRetrievalCases(data []byte) ([]RetrievalCase, error) {
 		if err := c.validate(); err != nil {
 			return nil, fmt.Errorf("line %d: %w", line, err)
 		}
-		if seen[c.ID] {
-			return nil, fmt.Errorf("line %d: duplicate id %q", line, c.ID)
+		if seen[c.key()] {
+			return nil, fmt.Errorf("line %d: duplicate id %q", line, c.key())
 		}
-		seen[c.ID] = true
+		seen[c.key()] = true
 		cases = append(cases, c)
 	}
 	if err := sc.Err(); err != nil {
@@ -72,6 +84,8 @@ func parseRetrievalCases(data []byte) ([]RetrievalCase, error) {
 	}
 	return cases, nil
 }
+
+func (c RetrievalCase) key() string { return c.ID }
 
 func (c RetrievalCase) validate() error {
 	if c.ID == "" || c.Question == "" {
