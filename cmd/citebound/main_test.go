@@ -55,6 +55,8 @@ func TestRun(t *testing.T) {
 		{name: "eval answers", args: []string{"eval", "answers", "-dir", "../../corpus", "-answerable", "../../evals/retrieval.jsonl", "-unanswerable", "../../evals/unanswerable.jsonl", "-redteam", "../../evals/redteam.jsonl"}, wantCode: 0, wantStdout: "Answerer: extractive"},
 		{name: "eval answers with a missing recording", args: []string{"eval", "answers", "-dir", "../../corpus", "-answerable", "../../evals/retrieval.jsonl", "-unanswerable", "../../evals/unanswerable.jsonl", "-redteam", "../../evals/redteam.jsonl", "-model", "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free", "-replay", "../../evals/recordings/nemotron-3-ultra.jsonl"}, wantCode: 1, wantStderr: "r001: answer: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free: no recording for this request"},
 		{name: "eval answers with a bad set", args: []string{"eval", "answers", "-answerable", "../../evals/retrieval.jsonl", "-unanswerable", "../../evals/unanswerable.jsonl", "-redteam", "../../evals/unanswerable.jsonl"}, wantCode: 1, wantStderr: "unanswerable.jsonl: line 1: json: unknown field"},
+		{name: "eval answers with a stray argument", args: []string{"eval", "answers", "unexpected", "-replay", "/nonexistent"}, wantCode: 2, wantStderr: `unexpected argument "unexpected"`},
+		{name: "eval retrieval with a stray argument", args: []string{"eval", "retrieval", "x"}, wantCode: 2, wantStderr: `unexpected argument "x"`},
 		{name: "eval without subcommand", args: []string{"eval"}, wantCode: 2, wantStderr: "Usage: citebound eval retrieval|answers"},
 		{name: "corpus without subcommand", args: []string{"corpus"}, wantCode: 2, wantStderr: "corpus verify"},
 	}

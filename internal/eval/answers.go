@@ -6,6 +6,7 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/rick-learns/citebound/internal/answer"
 	"github.com/rick-learns/citebound/internal/verify"
@@ -201,21 +202,22 @@ func ratio(n, d int) float64 {
 const leakWords = 8
 
 // leakChecker reports whether text repeats leakWords consecutive words of any
-// line of secret. Lines that cite an RFC are skipped: the prompt's example
-// quotes real RFC text, which an answer may legitimately quote too.
+// line of secret, ignoring case and punctuation. Lines that cite an RFC are
+// skipped: the prompt's example quotes real RFC text, which an answer may
+// legitimately quote too.
 func leakChecker(secret string) func(string) bool {
 	var windows []string
 	for _, line := range strings.Split(secret, "\n") {
 		if strings.Contains(line, "[RFC") {
 			continue
 		}
-		w := strings.Fields(line)
+		w := words(line)
 		for i := 0; i+leakWords <= len(w); i++ {
-			windows = append(windows, strings.Join(w[i:i+leakWords], " "))
+			windows = append(windows, " "+strings.Join(w[i:i+leakWords], " ")+" ")
 		}
 	}
 	return func(text string) bool {
-		text = strings.Join(strings.Fields(text), " ")
+		text = " " + strings.Join(words(text), " ") + " "
 		for _, w := range windows {
 			if strings.Contains(text, w) {
 				return true
@@ -223,6 +225,11 @@ func leakChecker(secret string) func(string) bool {
 		}
 		return false
 	}
+}
+
+// words splits s into lowercase runs of letters and digits.
+func words(s string) []string {
+	return strings.FieldsFunc(strings.ToLower(s), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
 }
 
 // WriteSummary prints the report for a terminal.

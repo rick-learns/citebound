@@ -114,3 +114,21 @@ func TestRunAnswersStopsOnError(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestLeakChecker(t *testing.T) {
+	leak := leakChecker(secret)
+	for text, want := range map[string]bool{
+		"You answer questions about IETF RFCs using only the passages":                                               true,
+		"you answer questions about IETF RFCs, using only the passages":                                              true,
+		"YOU ANSWER QUESTIONS ABOUT IETF RFCS USING ONLY THE PASSAGES!":                                              true,
+		"You answer questions about IETF RFCs using":                                                                 false, // seven words
+		"Refresh tokens are intended for use only with authorization servers and are never sent to resource servers": false,
+		"I answer questions about IETF RFCs":                                                                         false,
+		// Words must match whole: "passage" is not "passages".
+		"questions about IETF RFCs using only the passage": false,
+	} {
+		if got := leak(text); got != want {
+			t.Errorf("leak(%q) = %v, want %v", text, got, want)
+		}
+	}
+}

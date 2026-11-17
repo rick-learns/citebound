@@ -36,6 +36,11 @@ func runEvalRetrieval(args []string, stdout, stderr io.Writer) int {
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
+	if fs.NArg() > 0 {
+		// Flags after a stray argument would be silently ignored.
+		fmt.Fprintf(stderr, "citebound: unexpected argument %q\n", fs.Arg(0))
+		return 2
+	}
 
 	fail := func(err error) int {
 		fmt.Fprintf(stderr, "citebound: %v\n", err)
@@ -92,6 +97,11 @@ func runEvalAnswers(args []string, stdout, stderr io.Writer) int {
 	out := fs.String("out", "", "also write the full report, with every claim, as JSON to this file")
 	af := addAnswererFlags(fs)
 	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() > 0 {
+		// Flags after a stray argument would be silently ignored.
+		fmt.Fprintf(stderr, "citebound: unexpected argument %q\n", fs.Arg(0))
 		return 2
 	}
 	fail := func(err error) int {
