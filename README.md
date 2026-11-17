@@ -84,6 +84,7 @@ go run ./cmd/citebound search "DPoP proof nonce"
 echo 'Tokens expire. [RFC6749 §1.5 ¶2: "refresh tokens never expire"]' | go run ./cmd/citebound check -
 go run ./cmd/citebound corpus stats
 go run ./cmd/citebound serve   # HTTP API on 127.0.0.1:8080
+make build && bin/citebound serve   # the same, with the web UI at http://127.0.0.1:8080
 make eval                      # score search against the labeled questions
 
 # A real model's recorded answers, replayed with no API key

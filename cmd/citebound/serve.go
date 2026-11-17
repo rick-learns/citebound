@@ -19,6 +19,7 @@ import (
 	"github.com/rick-learns/citebound/internal/server"
 	"github.com/rick-learns/citebound/internal/verify"
 	"github.com/rick-learns/citebound/internal/version"
+	"github.com/rick-learns/citebound/web"
 )
 
 func runServe(args []string, stdout, stderr io.Writer) int {
@@ -65,6 +66,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
+	api.Handle("/", server.UI(web.Files()))
 
 	ln, err := net.Listen("tcp", *addr)
 	if err != nil {

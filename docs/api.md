@@ -4,6 +4,10 @@
 a strict `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, and
 `Referrer-Policy: no-referrer`.
 
+Paths outside `/api/` serve the web UI, if the binary was built with it
+(`make build`; see [decision 0009](decisions/0009-embed-the-web-ui.md)).
+Otherwise they are a plain-text 404 that says how to build it.
+
 Errors outside a stream are JSON with a matching status:
 
 ```json

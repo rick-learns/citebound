@@ -6,7 +6,7 @@ GO_LDFLAGS := -X github.com/rick-learns/citebound/internal/version.Version=$(she
 # Commit subjects are checked against this ref.
 BASE ?= origin/main
 
-check: go-check web-check eval demo commits
+check: go-check web-check eval demo build commits
 
 go-check:
 	go mod tidy -diff
@@ -41,9 +41,11 @@ web-check:
 commits:
 	scripts/check-commits.sh $(BASE)
 
-build:
+# The binary, with the web UI embedded (docs/decisions/0009-embed-the-web-ui.md).
+build: web/node_modules
 	cd web && npm run build
-	go build -trimpath -ldflags "$(GO_LDFLAGS)" -o bin/citebound ./cmd/citebound
+	go test -tags embedui ./web
+	go build -tags embedui -trimpath -ldflags "$(GO_LDFLAGS)" -o bin/citebound ./cmd/citebound
 
 clean:
 	rm -rf bin web/dist
