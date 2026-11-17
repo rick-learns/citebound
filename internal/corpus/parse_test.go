@@ -1,8 +1,6 @@
 package corpus
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -197,21 +195,13 @@ func TestParseRejects(t *testing.T) {
 
 func loadPinned(t *testing.T) map[int]*RFC {
 	t.Helper()
-	m, err := LoadManifest("../../corpus")
+	rfcs, err := Load("../../corpus")
 	if err != nil {
 		t.Fatal(err)
 	}
-	out := make(map[int]*RFC, len(m.Documents))
-	for _, d := range m.Documents {
-		text, err := os.ReadFile(filepath.Join("../../corpus", d.File))
-		if err != nil {
-			t.Fatal(err)
-		}
-		r, err := Parse(d.Number, d.Title, text)
-		if err != nil {
-			t.Fatal(err)
-		}
-		out[d.Number] = r
+	out := make(map[int]*RFC, len(rfcs))
+	for _, r := range rfcs {
+		out[r.Number] = r
 	}
 	return out
 }
