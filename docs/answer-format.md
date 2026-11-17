@@ -34,6 +34,10 @@ Quotes may contain double quotes, written plainly (`the "aud" claim`) or
 escaped (`the \"aud\" claim`). See
 [decision 0008](decisions/0008-escaped-double-quotes.md).
 
+To check an answer from anywhere, such as a model you are trying out, save it
+in this format and run `citebound check answer.txt` (or `-` for standard
+input). It prints each verdict and exits 1 if any claim is struck.
+
 ## Abstention
 
 After verification, the answer is withheld if retrieval found nothing, the

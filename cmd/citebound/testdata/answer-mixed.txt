@@ -1,0 +1,3 @@
+Refresh tokens only go to the authorization server. [RFC6749 §1.5 ¶2: "refresh tokens are intended for use only with authorization servers and are never sent to resource servers"]
+Refresh tokens may be sent to resource servers. [RFC6749 §1.5 ¶2: "refresh tokens may be sent to resource servers when needed"]
+Refresh tokens are defined in section 99. [RFC6749 §99 ¶1: "refresh tokens are credentials used to obtain access tokens"]
