@@ -93,7 +93,8 @@ func New(cfg Config) (*Server, error) {
 	return s, nil
 }
 
-// Handle registers h for pattern, for example to serve the web UI at "/".
+// Handle registers h for pattern, for example to serve the web UI at "/" (see
+// UI).
 func (s *Server) Handle(pattern string, h http.Handler) { s.mux.Handle(pattern, h) }
 
 // ServeHTTP implements http.Handler, adding security headers to every

@@ -41,6 +41,14 @@ jobs:
         run: make eval
       - name: Demo
         run: make demo
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # The binary with the web UI embedded; the steps above build without it.
+      - name: Build with the web UI
+        run: make build
 
   web:
     runs-on: ubuntu-latest
