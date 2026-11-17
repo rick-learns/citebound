@@ -65,7 +65,7 @@ The response is `text/event-stream`. Each event is one `event:` line and one
 | `claim` | `{"id": 0, "text": "...", "ref": "RFC6749 §10.4 ¶1", "quote": "..."}` | Per claim. `ref` is `""` for an uncited claim, or the raw text of a malformed citation. |
 | `verdict` | `{"id": 0, "status": "verified" \| "struck", "reason": ""}` | Right after its claim. Reasons are listed in [the answer format](answer-format.md). |
 | `abstain` | `{"code": "too-many-struck", "reason": "Too few claims could be verified to trust the answer."}` | If the answer is withheld. Codes are listed in [decision 0006](decisions/0006-abstention-policy.md). |
-| `done` | `{"mode", "model", "claims", "verified", "struck", "latencyMs", "inputTokens", "outputTokens", "costUsd"}` | Last, unless an error ended the stream. |
+| `done` | `{"mode", "model", "claims", "verified", "struck", "latencyMs", "inputTokens", "outputTokens", "costUsd"}` | Last, unless an error ended the stream. `inputTokens` and `outputTokens` are what the model reported for this answer: 0 in `extractive` mode, and in `replay` mode the counts recorded with the answer. `costUsd` is not computed yet and is always 0. |
 | `error` | `{"code": "unavailable", "message": "..."}` | Instead of the remaining events, if answering failed after the stream started. |
 
 When an answer is withheld, its claims and verdicts have already been

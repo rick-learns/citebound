@@ -117,7 +117,7 @@ export function friendlyError(error: ErrorInfo): FriendlyError {
   }
 }
 
-/** "2 of 3 claims verified · 812 ms · extractive" */
+/** "2 of 3 claims verified · 812 ms · extractive", plus tokens and cost when a model reports them. */
 export function summaryText(done: DoneEvent): string {
   const noun = done.claims === 1 ? "claim" : "claims";
   const parts = [
@@ -127,6 +127,8 @@ export function summaryText(done: DoneEvent): string {
     `${String(Math.round(done.latencyMs))} ms`,
     modeText(done.mode, done.model),
   ];
+  const tokens = done.inputTokens + done.outputTokens;
+  if (tokens > 0) parts.push(`${tokens.toLocaleString("en-US")} tokens`);
   if (done.costUsd > 0) parts.push(`$${done.costUsd.toFixed(4)}`);
   return parts.join(" · ");
 }

@@ -18,7 +18,14 @@ import (
 // answer is plain text in the answer format; it is parsed and verified
 // afterwards, whoever wrote it.
 type Answerer interface {
-	Answer(ctx context.Context, question string, passages []index.Hit) (string, error)
+	Answer(ctx context.Context, question string, passages []index.Hit) (Reply, error)
+}
+
+// Reply is an answer and the model tokens it used, which are zero for an
+// answerer without a model.
+type Reply struct {
+	Text                      string
+	InputTokens, OutputTokens int
 }
 
 // Extractive answers by quoting whole sentences from the passages that cover
@@ -43,14 +50,18 @@ type candidate struct {
 }
 
 // Answer implements Answerer.
-func (e Extractive) Answer(_ context.Context, question string, passages []index.Hit) (string, error) {
+func (e Extractive) Answer(_ context.Context, question string, passages []index.Hit) (Reply, error) {
+	return Reply{Text: e.text(question, passages)}, nil
+}
+
+func (e Extractive) text(question string, passages []index.Hit) string {
 	maxClaims := cmpOr(e.MaxClaims, 3)
 	maxPassages := cmpOr(e.MaxPassages, 5)
 
 	terms := stems(index.Terms(question))
 	need := minCoverage(len(terms))
 	if need == 0 {
-		return verify.AbstainMarker, nil
+		return verify.AbstainMarker
 	}
 
 	// The best sentence of each of the first maxPassages prose passages that
@@ -77,7 +88,7 @@ func (e Extractive) Answer(_ context.Context, question string, passages []index.
 		}
 	}
 	if len(picks) == 0 {
-		return verify.AbstainMarker, nil
+		return verify.AbstainMarker
 	}
 	// Most of the question first; ties go to the better passage.
 	slices.SortStableFunc(picks, func(a, b candidate) int {
@@ -92,7 +103,7 @@ func (e Extractive) Answer(_ context.Context, question string, passages []index.
 	for i, c := range picks {
 		lines[i] = verify.Format(verify.Claim{Text: c.sentence, Ref: passages[c.passage].Ref, Quote: c.sentence})
 	}
-	return strings.Join(lines, "\n"), nil
+	return strings.Join(lines, "\n")
 }
 
 func cmpOr(v, def int) int {

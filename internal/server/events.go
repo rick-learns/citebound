@@ -153,12 +153,14 @@ func (s *Server) answer(ctx context.Context, stream *eventStream, question strin
 		}
 	}
 	_ = stream.send("done", doneEvent{
-		Mode:      s.cfg.Mode,
-		Model:     s.cfg.Model,
-		Claims:    len(res.Claims),
-		Verified:  res.Verified,
-		Struck:    len(res.Claims) - res.Verified,
-		LatencyMs: s.clock().Sub(start).Milliseconds(),
+		Mode:         s.cfg.Mode,
+		Model:        s.cfg.Model,
+		Claims:       len(res.Claims),
+		Verified:     res.Verified,
+		Struck:       len(res.Claims) - res.Verified,
+		LatencyMs:    s.clock().Sub(start).Milliseconds(),
+		InputTokens:  res.InputTokens,
+		OutputTokens: res.OutputTokens,
 	})
 }
 

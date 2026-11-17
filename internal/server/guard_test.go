@@ -218,7 +218,7 @@ func TestAskRateLimit(t *testing.T) {
 // gate answers only when released, signalling when it starts.
 type gate struct{ started, release chan struct{} }
 
-func (g gate) Answer(ctx context.Context, q string, p []index.Hit) (string, error) {
+func (g gate) Answer(ctx context.Context, q string, p []index.Hit) (answer.Reply, error) {
 	g.started <- struct{}{}
 	<-g.release
 	return answer.Extractive{}.Answer(ctx, q, p)
