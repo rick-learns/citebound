@@ -27,6 +27,9 @@ func TestRun(t *testing.T) {
 		{name: "ask", args: []string{"ask", "-dir", "../../corpus", "Can a refresh token be bound to a client?"}, wantCode: 0, wantStdout: "✓ "},
 		{name: "ask off topic", args: []string{"ask", "-dir", "../../corpus", "How do I bake sourdough bread?"}, wantCode: 0, wantStdout: "does not support an answer"},
 		{name: "ask without question", args: []string{"ask"}, wantCode: 2, wantStderr: "Usage: citebound ask"},
+		{name: "eval retrieval", args: []string{"eval", "retrieval", "-dir", "../../corpus", "-set", "../../evals/retrieval.jsonl", "-thresholds", "../../evals/thresholds.json"}, wantCode: 0, wantStdout: "Above the thresholds"},
+		{name: "eval retrieval below thresholds", args: []string{"eval", "retrieval", "-dir", "../../corpus", "-set", "../../evals/retrieval.jsonl", "-thresholds", "testdata/high-thresholds.json"}, wantCode: 1, wantStderr: "below"},
+		{name: "eval without subcommand", args: []string{"eval"}, wantCode: 2, wantStderr: "Usage: citebound eval retrieval"},
 		{name: "corpus without subcommand", args: []string{"corpus"}, wantCode: 2, wantStderr: "corpus verify"},
 	}
 	for _, tt := range tests {
