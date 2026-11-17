@@ -1,5 +1,25 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, askStream, errorFromBody, parseAskEvent, parseMeta, type AskEvent } from "./api";
+import {
+  ApiError,
+  askStream,
+  errorFromBody,
+  fetchMeta,
+  parseAskEvent,
+  parseMeta,
+  type AskEvent,
+} from "./api";
+
+const DONE = JSON.stringify({
+  mode: "extractive",
+  model: "",
+  claims: 1,
+  verified: 0,
+  struck: 1,
+  latencyMs: 3,
+  inputTokens: 0,
+  outputTokens: 0,
+  costUsd: 0,
+});
 
 function streamResponse(chunks: string[], init: ResponseInit = {}): Response {
   const enc = new TextEncoder();
@@ -73,6 +93,7 @@ describe("askStream", () => {
           'event: claim\ndata: {"id":0,"text":"Ref § and ¶","ref":"","quote":""}\n',
           "\nevent: abst",
           'ain\ndata: {"code":"no-passages","reason":"none"}\n\n',
+          `event: done\ndata: ${DONE}\n\n`,
         ]),
       ),
     );
@@ -85,7 +106,53 @@ describe("askStream", () => {
     expect(events).toEqual([
       { type: "claim", data: { id: 0, text: "Ref § and ¶", ref: "", quote: "" } },
       { type: "abstain", data: { code: "no-passages", reason: "none" } },
+      { type: "done", data: JSON.parse(DONE) as unknown },
     ]);
+  });
+
+  it("rejects a stream that ends without done or error", async () => {
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve(streamResponse(['event: abstain\ndata: {"code":"x","reason":"y"}\n\n'])),
+    );
+    await expect(collect("q")).rejects.toEqual(
+      new ApiError("incomplete", "The answer stream ended before it finished."),
+    );
+  });
+
+  it("ends after an error event", async () => {
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve(
+        streamResponse([
+          'event: error\ndata: {"code":"unavailable","message":"timed out"}\n\n',
+          `event: done\ndata: ${DONE}\n\n`,
+        ]),
+      ),
+    );
+    expect(await collect("q")).toEqual([
+      { type: "error", error: { code: "unavailable", message: "timed out" } },
+    ]);
+  });
+
+  it("reports a failed fetch as a network error, and an abort as itself", async () => {
+    vi.stubGlobal("fetch", () => Promise.reject(new TypeError("Failed to fetch")));
+    await expect(collect("q")).rejects.toEqual(new ApiError("network", "Failed to fetch"));
+    await expect(fetchMeta()).rejects.toMatchObject({ code: "network" });
+
+    const ctrl = new AbortController();
+    ctrl.abort();
+    vi.stubGlobal("fetch", () => Promise.reject(new DOMException("aborted", "AbortError")));
+    await expect(collect("q", ctrl.signal)).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("keeps an abort while reading a body as an abort", async () => {
+    const ctrl = new AbortController();
+    const res = new Response("{}", { status: 404 });
+    vi.spyOn(res, "json").mockImplementation(() => {
+      ctrl.abort();
+      return Promise.reject(new DOMException("aborted", "AbortError"));
+    });
+    vi.stubGlobal("fetch", () => Promise.resolve(res));
+    await expect(fetchMeta(ctrl.signal)).rejects.toMatchObject({ name: "AbortError" });
   });
 
   it("throws ApiError from a non-200 JSON body", async () => {

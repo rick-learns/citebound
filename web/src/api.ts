@@ -69,7 +69,10 @@ export interface DoneEvent {
   costUsd: number;
 }
 
-/** Error payload; codes are the server's (docs/api.md), plus client-only "network" for a failed fetch. */
+/**
+ * Error payload. Codes are the server's (docs/api.md), plus two from the client: "network" when
+ * the request or the stream fails, and "incomplete" when the stream ends without done or error.
+ */
 export interface ErrorInfo {
   code: string;
   message: string;
@@ -230,9 +233,38 @@ export function errorFromBody(body: unknown, status: number): ApiError {
   return new ApiError(STATUS_CODES[status] ?? "internal", `HTTP ${String(status)}`);
 }
 
+const isAbort = (err: unknown, signal: AbortSignal | null | undefined): boolean =>
+  signal?.aborted === true || (err instanceof Error && err.name === "AbortError");
+
+/** Calls fn, turning any failure but an abort into ApiError "network". */
+async function network<T>(
+  fn: () => Promise<T>,
+  signal: AbortSignal | null | undefined,
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (isAbort(err, signal)) throw err;
+    throw new ApiError("network", err instanceof Error ? err.message : String(err));
+  }
+}
+
+/** Reads a JSON body, or null if it is not JSON. An abort while reading is rethrown. */
+async function readJson(res: Response, signal: AbortSignal | null | undefined): Promise<unknown> {
+  try {
+    return (await res.json()) as unknown;
+  } catch (err) {
+    if (isAbort(err, signal)) throw err;
+    return null;
+  }
+}
+
 async function getJson(url: string, signal?: AbortSignal): Promise<unknown> {
-  const res = await fetch(url, { headers: { Accept: "application/json" }, signal: signal ?? null });
-  const body: unknown = await res.json().catch(() => null);
+  const res = await network(
+    () => fetch(url, { headers: { Accept: "application/json" }, signal: signal ?? null }),
+    signal,
+  );
+  const body = await readJson(res, signal);
   if (!res.ok) throw errorFromBody(body, res.status);
   return body;
 }
@@ -251,31 +283,36 @@ export async function fetchSection(
 }
 
 /**
- * POSTs a question and yields typed events as the SSE response streams in.
- * Rejects with ApiError on a non-200 response, or with the fetch AbortError on abort.
+ * POSTs a question and yields typed events as the SSE response streams in. The last event is
+ * done or error. Rejects with ApiError on a non-200 response, a network failure, or a stream
+ * that ends early ("incomplete"), and with the fetch AbortError on abort.
  */
 export async function* askStream(question: string, signal: AbortSignal): AsyncGenerator<AskEvent> {
-  const res = await fetch("/api/ask", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-    body: JSON.stringify({ question }),
+  const res = await network(
+    () =>
+      fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+        body: JSON.stringify({ question }),
+        signal,
+      }),
     signal,
-  });
-  if (!res.ok) {
-    const body: unknown = await res.json().catch(() => null);
-    throw errorFromBody(body, res.status);
-  }
+  );
+  if (!res.ok) throw errorFromBody(await readJson(res, signal), res.status);
   if (!res.body) throw new ApiError("internal", "The server sent an empty response.");
 
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
   const parser = new SseParser();
   try {
     for (;;) {
-      const { done, value } = await reader.read();
-      if (done) return;
+      const { done, value } = await network(() => reader.read(), signal);
+      if (done) throw new ApiError("incomplete", "The answer stream ended before it finished.");
       for (const msg of parser.push(value)) {
         const event = parseAskEvent(msg.event, msg.data);
-        if (event) yield event;
+        if (!event) continue;
+        yield event;
+        // The server sends nothing after done or error (internal/server/events.go).
+        if (event.type === "done" || event.type === "error") return;
       }
     }
   } finally {
