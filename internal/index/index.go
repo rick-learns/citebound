@@ -95,7 +95,7 @@ func load(ctx context.Context, db *sql.DB, rfcs []*corpus.RFC) (err error) {
 	defer stmt.Close()
 	for _, r := range rfcs {
 		for _, s := range r.Sections {
-			if isReferenceList(s.Title) {
+			if IsReferenceList(s.Title) {
 				continue
 			}
 			for _, p := range s.Paragraphs {
@@ -111,7 +111,9 @@ func load(ctx context.Context, db *sql.DB, rfcs []*corpus.RFC) (err error) {
 	return tx.Commit()
 }
 
-func isReferenceList(title string) bool {
+// IsReferenceList reports whether a section with this title is a reference
+// list, which the index leaves out.
+func IsReferenceList(title string) bool {
 	return title == "References" || strings.HasSuffix(title, " References")
 }
 

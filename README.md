@@ -46,6 +46,15 @@ $ citebound ask "Can a refresh token be bound to a client?"
 Verification proves that a quote is real. It does not prove that the quote
 supports the claim; that is what the evals measure.
 
+## Evals
+
+CI scores search against [100 labeled questions](evals/README.md) on every
+pull request and fails if recall@5 or MRR drops below the committed baseline.
+
+| recall@5 | hit rate@5 | MRR@10 |
+| --- | --- | --- |
+| 0.52 | 0.65 | 0.44 |
+
 ## Try it
 
 Requires Go 1.26 or later.
@@ -55,12 +64,14 @@ go run ./cmd/citebound ask "Should access tokens be sent in the URI query?"
 go run ./cmd/citebound search "DPoP proof nonce"
 go run ./cmd/citebound corpus stats
 go run ./cmd/citebound serve   # HTTP API on 127.0.0.1:8080
+make eval                      # score search against the labeled questions
 ```
 
 ## Documentation
 
 - [Answer format](docs/answer-format.md)
 - [HTTP API](docs/api.md)
+- [Evals](evals/README.md)
 - [Decision records](docs/decisions/README.md)
 - [Corpus and parsing](corpus/README.md)
 - [Contributing](CONTRIBUTING.md) and [security policy](SECURITY.md)
