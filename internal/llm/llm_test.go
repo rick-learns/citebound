@@ -8,8 +8,11 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeAPI serves one canned reply and records the request it got.
@@ -230,3 +233,64 @@ func TestOversizedResponse(t *testing.T) {
 
 func anthropicAt(url string) Provider { return &Anthropic{APIKey: "sk-test", Model: "m", BaseURL: url} }
 func openAIAt(url string) Provider    { return &OpenAI{APIKey: "sk-test", Model: "m", BaseURL: url} }
+
+func TestRecordAndReplay(t *testing.T) {
+	api := &fakeAPI{status: 200, reply: `{"model":"m-1","content":[{"type":"text","text":"recorded answer"}],"usage":{"input_tokens":5,"output_tokens":2}}`}
+	live := anthropicAt(api.start(t))
+	path := filepath.Join(t.TempDir(), "recordings.jsonl")
+	rec := &Recorder{Provider: live, Path: path}
+	if _, err := rec.Complete(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	other := req
+	other.User = "What is DPoP?"
+	if _, err := rec.Complete(context.Background(), other); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "sk-test") {
+		t.Fatal("recording contains the API key")
+	}
+	if info, _ := os.Stat(path); info.Mode().Perm() != 0o600 {
+		t.Errorf("recording mode %v, want 0600", info.Mode().Perm())
+	}
+
+	replay, err := LoadReplay(path, live.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	today := time.Now().UTC().Format(time.DateOnly)
+	if replay.Oldest != today || replay.Newest != today {
+		t.Errorf("recorded %s to %s, want %s", replay.Oldest, replay.Newest, today)
+	}
+	if replay.Len() != 2 || replay.Name() != live.Name() {
+		t.Errorf("replay has %d recordings, name %q", replay.Len(), replay.Name())
+	}
+	resp, err := replay.Complete(context.Background(), req)
+	if err != nil || resp.Text != "recorded answer" || resp.InputTokens != 5 {
+		t.Errorf("replay = %+v, %v", resp, err)
+	}
+	changed := req
+	changed.System += " "
+	if _, err := replay.Complete(context.Background(), changed); !errors.Is(err, ErrNotRecorded) {
+		t.Errorf("changed prompt: err = %v, want ErrNotRecorded", err)
+	}
+
+	otherModel, err := LoadReplay(path, "anthropic/other")
+	if err != nil || otherModel.Len() != 0 {
+		t.Errorf("other provider: %d recordings, %v", otherModel.Len(), err)
+	}
+
+	edited := strings.Replace(string(data), "recorded answer", "edited answer", 1)
+	edited = strings.Replace(edited, `"user":"What is PKCE?"`, `"user":"What is PKCE??"`, 1)
+	if err := os.WriteFile(path, []byte(edited), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadReplay(path, live.Name()); err == nil || !strings.Contains(err.Error(), "edited by hand") {
+		t.Errorf("hand-edited request: err = %v", err)
+	}
+}

@@ -13,6 +13,7 @@ supersedes the old one.
 | [0004](0004-pinned-rfc-corpus.md) | Answer only from a pinned corpus of 21 RFCs | Accepted |
 | [0005](0005-exact-quote-verification.md) | Verify citations by exact quote match, per paragraph | Accepted |
 | [0006](0006-abstention-policy.md) | Abstain unless most claims verify | Accepted |
+| [0007](0007-model-providers-and-replay.md) | Call models over plain HTTP, and replay recordings in CI | Accepted |
 
 ## Writing a record
 
