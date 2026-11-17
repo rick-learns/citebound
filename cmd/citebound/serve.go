@@ -31,6 +31,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	askRate := fs.Float64("ask-rate", 10, "questions a minute each client may ask")
 	askBurst := fs.Int("ask-burst", 5, "questions a client may ask at once before -ask-rate applies")
 	maxInFlight := fs.Int("max-inflight", 8, "questions answered at once, across all clients")
+	dailyTokens := fs.Int("daily-tokens", 1_000_000, "model tokens answers may use each UTC day before falling back to extractive answers")
 	ipHeader := fs.String("client-ip-header", "", "header holding the client's address, set by a trusted reverse proxy (for example Fly-Client-IP)")
 	af := addAnswererFlags(fs)
 	if err := fs.Parse(args); err != nil {
@@ -71,6 +72,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		AskBurst:       *askBurst,
 		MaxInFlight:    *maxInFlight,
 		ClientIPHeader: *ipHeader,
+		DailyTokens:    *dailyTokens,
 	})
 	if err != nil {
 		return fail(err)

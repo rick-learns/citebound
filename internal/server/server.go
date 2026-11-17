@@ -51,6 +51,11 @@ type Config struct {
 	// Only set it behind a proxy that overwrites the header: otherwise
 	// clients choose their own rate-limit key.
 	ClientIPHeader string
+	// DailyTokens caps the model tokens answers use each UTC day, across all
+	// clients (decision 0011). Once it is reached, questions are answered by
+	// the extractive answerer until the day ends. Answers already running
+	// finish, so a day can overshoot by up to MaxInFlight answers.
+	DailyTokens int
 }
 
 // Server is the HTTP API.
@@ -63,6 +68,10 @@ type Server struct {
 	// Nil when their guard is disabled.
 	limits   *limiter
 	inflight chan struct{}
+	budget   *budget
+	// fallback answers once the budget is used up: the same pipeline with
+	// the extractive answerer.
+	fallback *answer.Pipeline
 }
 
 // New returns a server for cfg.
@@ -85,6 +94,12 @@ func New(cfg Config) (*Server, error) {
 	}
 	if cfg.MaxInFlight > 0 {
 		s.inflight = make(chan struct{}, cfg.MaxInFlight)
+	}
+	if cfg.DailyTokens > 0 {
+		s.budget = &budget{limit: cfg.DailyTokens, now: func() time.Time { return s.clock() }}
+		fb := *cfg.Pipeline
+		fb.Answerer = answer.Extractive{}
+		s.fallback = &fb
 	}
 	m := metaResponse{Version: cfg.Version, Mode: cfg.Mode, Model: cfg.Model, RFCs: []rfcMeta{}}
 	for _, r := range cfg.RFCs {
