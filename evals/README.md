@@ -145,6 +145,18 @@ Where they differed, the stricter label is kept, with its labeler's note.
 No human has reviewed them yet, so treat the rates as estimates. A label can
 be corrected by editing its line.
 
+## Scorecard
+
+[`docs/scorecard.md`](../docs/scorecard.md) puts every result above on one
+page: retrieval, then validity, claim support, and refusal for each answerer
+in [`scorecard.json`](scorecard.json). A model answerer there must name a
+recordings file, so the scorecard never calls a model.
+
+```sh
+make scorecard   # regenerate it
+make eval        # CI: fails if it is out of date
+```
+
 ## Recordings
 
 [`recordings/`](recordings/README.md) holds real model answers, replayed with

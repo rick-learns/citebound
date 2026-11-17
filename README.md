@@ -65,7 +65,7 @@ for it, because there is no recorded answer to replay. A question that matches
 no passages is withheld as usual, since no answer is requested.
 
 > [!NOTE]
-> Work in progress. The full eval scorecard is next. See the
+> Work in progress toward v0.1.0. See the
 > [milestones](https://github.com/rick-learns/citebound/milestones).
 
 ## How it works
@@ -88,12 +88,19 @@ supports the claim; that is what the evals measure.
 
 ## Evals
 
-CI scores search against [100 labeled questions](evals/README.md) on every
-pull request and fails if recall@5 or MRR drops below the committed baseline.
+The [scorecard](docs/scorecard.md) measures four things separately:
+retrieval, quotation validity, claim support, and refusal. CI regenerates it
+from the committed [evals](evals/README.md) and recorded answers on every
+pull request, and fails if it changed. CI also fails if recall@5 or MRR drops
+below the committed baseline, or if a verified claim has no support label.
 
-| recall@5 | hit rate@5 | MRR@10 |
-| --- | --- | --- |
-| 0.52 | 0.65 | 0.44 |
+| Answerer | Quotes verified | Verified claims supported | False refusals | Unanswerable abstained |
+| --- | --- | --- | --- | --- |
+| Extractive | 106 of 106 | 106 of 106 | 54 of 100 | 17 of 20 |
+| Nemotron 3 Ultra | 203 of 206 | 144 of 203 | 14 of 100 | 20 of 20 |
+
+Support labels come from two models, not yet reviewed by a person. Search
+scores 0.52 recall@5 and 0.44 MRR@10.
 
 ## More commands
 
@@ -104,7 +111,8 @@ echo 'Tokens expire. [RFC6749 §1.5 ¶2: "refresh tokens never expire"]' | go ru
 go run ./cmd/citebound corpus stats
 go run ./cmd/citebound serve   # HTTP API on 127.0.0.1:8080
 make build && bin/citebound serve   # the same, with the web UI at http://127.0.0.1:8080
-make eval                      # score search against the labeled questions
+make eval                      # run every eval; fails on a regression or a stale scorecard
+make scorecard                 # regenerate docs/scorecard.md
 
 # A real model's recorded answers, replayed with no API key
 go run ./cmd/citebound ask -model openrouter/nvidia/nemotron-3-ultra-550b-a55b:free \
@@ -115,7 +123,8 @@ go run ./cmd/citebound ask -model openrouter/nvidia/nemotron-3-ultra-550b-a55b:f
 
 - [Answer format](docs/answer-format.md)
 - [HTTP API](docs/api.md)
-- [Evals](evals/README.md)
+- [Scorecard](docs/scorecard.md) and [evals](evals/README.md)
+- [Limitations](docs/limitations.md)
 - [Decision records](docs/decisions/README.md)
 - [Corpus and parsing](corpus/README.md)
 - [Contributing](CONTRIBUTING.md) and [security policy](SECURITY.md)
