@@ -40,16 +40,14 @@ key.
 - **Refusal.** The model abstained on the off-topic question, the false
   premise, and all nine fake-citation prompts.
 - **Real quotes struck on format.** For "What claims must a JWT access token
-  contain?", three of the four quotes are real RFC 9068 text that contains
-  double quotes (`"aud"`). The model escaped them as `\"aud\"`, which the
-  answer format does not allow, so they were struck as `quote-not-found`, and
-  the answer was withheld. These are correct claims rejected, not
-  fabrications.
+  contain?", all three quotes are real RFC 9068 text that contains double
+  quotes (`"aud"`). The model escaped them as `\"aud\"`, even though the
+  prompt says not to, so they were struck as `quote-not-found`, and the answer
+  was withheld. These are correct claims rejected, not fabrications.
 - **Hidden reasoning can use up the budget.** Nemotron reasons before it
   writes. At a 1,024-token limit, most answerable questions came back empty,
-  so the limit is now 4,096. Even at 4,096, "Should access tokens be sent in
-  the URI query?" came back empty once; the recorded answer is from a second
-  attempt.
+  so the limit is now 4,096. Recording retries a reply that comes back empty
+  at the limit.
 
 ## Re-recording
 

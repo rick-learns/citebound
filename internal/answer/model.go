@@ -26,7 +26,7 @@ Refresh tokens are only sent to the authorization server. [RFC6749 §1.5 ¶2: "r
 Rules:
 - <ref> is the passage's "ref" exactly, such as RFC6749 §1.5 ¶2.
 - The quote is copied character for character from that one passage's text, as decoded from JSON: the same words, case, and punctuation. Do not join text from two passages, skip words, add ellipses, or fix typos. Use at least 4 words.
-- If the words you want to quote contain a double quote, write it as \".
+- Inside a quote, write each double quote as a plain " character, never as \". The JSON escaping is not part of the text.
 - Every line must be a cited claim. No introduction, summary, headings, numbering, or Markdown.
 - Use as many passages as the answer needs, and no more than 5 claims. Where passages from different RFCs add to each other, cite each.
 - Keep the requirement level the RFC uses: MUST, SHOULD, and MAY are different.
