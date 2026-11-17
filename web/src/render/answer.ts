@@ -121,13 +121,17 @@ export function createAnswerView(onCite: CiteHandler): {
     body,
   );
 
-  let rendered = new Map<number, { claim: ClaimState; el: HTMLLIElement }>();
+  const rendered = new Map<number, { claim: ClaimState; el: HTMLLIElement }>();
   let renderedPassages: readonly Passage[] | null = null;
 
   function updateClaims(list: readonly ClaimState[]): void {
-    if (list.length === 0 && rendered.size > 0) {
-      claims.replaceChildren();
-      rendered = new Map();
+    // Drop claims that are no longer in the state, such as the previous question's.
+    const ids = new Set(list.map((c) => c.id));
+    for (const [id, { el }] of rendered) {
+      if (!ids.has(id)) {
+        el.remove();
+        rendered.delete(id);
+      }
     }
     for (const claim of list) {
       const prev = rendered.get(claim.id);
@@ -169,9 +173,18 @@ export function createAnswerView(onCite: CiteHandler): {
       setText(errorDetail, state.error.message);
     }
 
+    // The summary is the last thing announced, so a withheld answer says so here too, and its
+    // counts are not read as the result.
     let line = "";
-    if (state.phase === "done" && state.done) line = summaryText(state.done);
-    else if (state.phase === "aborted") line = "Stopped before the answer finished.";
+    if (state.phase === "done" && state.done) {
+      line = withheld ? `Answer withheld · ${summaryText(state.done)}` : summaryText(state.done);
+    } else if (state.phase === "aborted") {
+      line = withheld
+        ? "Answer withheld. Stopped before the stream finished."
+        : "Stopped before the answer finished.";
+    } else if (state.phase === "error" && withheld) {
+      line = "Answer withheld. The stream then failed.";
+    }
     setText(summary, line);
     summary.hidden = line === "";
 

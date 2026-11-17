@@ -104,13 +104,74 @@ describe("createAnswerView", () => {
     expect(withheldNote(view.el)?.hidden).toBe(false);
   });
 
-  it("shows a friendly error per code", () => {
+  it.each([
+    ["rate_limited", "Too many questions at once"],
+    ["budget_exhausted", "Live mode is paused"],
+    ["bad_request", "That question couldn't be processed"],
+    ["unavailable", "The assistant is temporarily unavailable"],
+    ["not_found", "Not found"],
+    ["incomplete", "The answer was cut off"],
+    ["network", "Couldn't reach the server"],
+    ["weird", "Something went wrong"],
+  ])("shows a friendly error for %s, with the server's message as text", (code, title) => {
     const view = createAnswerView(vi.fn());
-    view.update(stream({ type: "fail", error: { code: "budget_exhausted", message: XSS } }));
+    view.update(stream({ type: "fail", error: { code, message: XSS } }));
     const notice = view.el.querySelector<HTMLElement>(".notice--error");
     expect(notice?.hidden).toBe(false);
-    expect(notice?.querySelector(".notice__title")?.textContent).toBe("Live mode is paused");
+    expect(notice?.querySelector(".notice__title")?.textContent).toBe(title);
     expect(notice?.querySelector(".notice__detail")?.textContent).toBe(XSS);
     expect(notice?.querySelector("img")).toBeNull();
+  });
+
+  const verified = (id: number, text: string): Parameters<typeof reduce>[1][] => [
+    {
+      type: "event",
+      event: { type: "claim", data: { id, text, ref: "RFC6749 §1.5 ¶1", quote: "q" } },
+    },
+    { type: "event", event: { type: "verdict", data: { id, status: "verified", reason: "" } } },
+  ];
+  const abstained: Parameters<typeof reduce>[1] = {
+    type: "event",
+    event: { type: "abstain", data: { code: "answerer-abstained", reason: "The model declined." } },
+  };
+  const done = {
+    mode: "extractive" as const,
+    model: "",
+    claims: 1,
+    verified: 1,
+    struck: 0,
+    latencyMs: 812,
+    inputTokens: 0,
+    outputTokens: 0,
+    costUsd: 0,
+  };
+
+  it.each([
+    [
+      "done",
+      { type: "event", event: { type: "done", data: done } },
+      "Answer withheld · 1 of 1 claim verified · 812 ms · extractive",
+    ],
+    ["abort", { type: "abort" }, "Answer withheld. Stopped before the stream finished."],
+    [
+      "fail",
+      { type: "fail", error: { code: "incomplete", message: "" } },
+      "Answer withheld. The stream then failed.",
+    ],
+  ] as [string, Parameters<typeof reduce>[1], string][])(
+    "ends a withheld answer by saying it was withheld (%s)",
+    (_, end, want) => {
+      const view = createAnswerView(vi.fn());
+      view.update(stream(...verified(0, "A"), abstained, end));
+      expect(view.el.querySelector(".answer__summary")?.textContent).toBe(want);
+    },
+  );
+
+  it("drops the previous question's claims, even without an empty state between", () => {
+    const view = createAnswerView(vi.fn());
+    view.update(stream(...verified(0, "A0"), ...verified(1, "A1")));
+    view.update(stream(...verified(0, "B0")));
+    const texts = [...view.el.querySelectorAll(".claim__text")].map((p) => p.textContent);
+    expect(texts).toEqual(["B0"]);
   });
 });
