@@ -1,7 +1,6 @@
 package llm
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -9,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 	"time"
@@ -57,14 +57,15 @@ func LoadReplay(path, name string) (*Replay, error) {
 		return nil, err
 	}
 	r := &Replay{name: name, byKey: map[string]Response{}}
-	sc := bufio.NewScanner(bytes.NewReader(data))
-	sc.Buffer(nil, maxResponseBytes)
-	for line := 1; sc.Scan(); line++ {
-		if len(bytes.TrimSpace(sc.Bytes())) == 0 {
+	// Lines are split by hand: a recording has no size limit, and escaping
+	// can make one several times larger than the response it holds.
+	for i, text := range bytes.Split(data, []byte("\n")) {
+		line := i + 1
+		if len(bytes.TrimSpace(text)) == 0 {
 			continue
 		}
 		var rec Recording
-		if err := json.Unmarshal(sc.Bytes(), &rec); err != nil {
+		if err := json.Unmarshal(text, &rec); err != nil {
 			return nil, fmt.Errorf("%s:%d: %w", path, line, err)
 		}
 		if rec.Provider != name {
@@ -79,7 +80,7 @@ func LoadReplay(path, name string) (*Replay, error) {
 		}
 		r.Newest = max(r.Newest, rec.Recorded)
 	}
-	return r, sc.Err()
+	return r, nil
 }
 
 // Name implements Provider. It is the name of the provider recorded, so keys
@@ -122,13 +123,39 @@ func (r *Recorder) Complete(ctx context.Context, req Request) (*Response, error)
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	f, err := os.OpenFile(r.Path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
-	if err != nil {
+	if err := appendLine(r.Path, line); err != nil {
 		return nil, err
+	}
+	return resp, nil
+}
+
+// appendLine appends one JSON line to the recordings file at path, which is
+// made private (0600) even if it already existed with wider permissions. If
+// the file ends in a complete record with no newline, one is added first; if
+// it ends in a partial record, nothing is written, because appending would
+// leave the file unreadable.
+func appendLine(path string, line []byte) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o600) //nolint:gosec // the path is an operator-chosen recordings file
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if err := f.Chmod(0o600); err != nil {
+		return err
+	}
+	existing, err := io.ReadAll(f)
+	if err != nil {
+		return err
+	}
+	if n := len(existing); n > 0 && existing[n-1] != '\n' {
+		last := existing[bytes.LastIndexByte(existing, '\n')+1:]
+		if !json.Valid(last) {
+			return fmt.Errorf("%s ends in an incomplete record; fix or remove it before recording", path)
+		}
+		line = append([]byte("\n"), line...)
 	}
 	if _, err := f.Write(append(line, '\n')); err != nil {
-		_ = f.Close()
-		return nil, err
+		return err
 	}
-	return resp, f.Close()
+	return f.Close()
 }

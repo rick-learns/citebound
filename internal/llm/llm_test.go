@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -292,5 +293,83 @@ func TestRecordAndReplay(t *testing.T) {
 	}
 	if _, err := LoadReplay(path, live.Name()); err == nil || !strings.Contains(err.Error(), "edited by hand") {
 		t.Errorf("hand-edited request: err = %v", err)
+	}
+}
+
+// fixed is a Provider that always returns the same text.
+type fixed string
+
+func (fixed) Name() string { return "test/fixed" }
+func (f fixed) Complete(context.Context, Request) (*Response, error) {
+	return &Response{Text: string(f)}, nil
+}
+
+func TestRecordingLargerThanTheResponseCap(t *testing.T) {
+	// JSON escapes '<' as \u003c, six bytes for one.
+	path := filepath.Join(t.TempDir(), "rec.jsonl")
+	rec := &Recorder{Provider: fixed(strings.Repeat("<", 800<<10)), Path: path}
+	if _, err := rec.Complete(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	if info, _ := os.Stat(path); info.Size() <= maxResponseBytes {
+		t.Fatalf("recording is %d bytes; the test needs one over %d", info.Size(), maxResponseBytes)
+	}
+	replay, err := LoadReplay(path, "test/fixed")
+	if err != nil || replay.Len() != 1 {
+		t.Fatalf("LoadReplay: %d recordings, %v", replay.Len(), err)
+	}
+}
+
+func TestRecorderRepairsOrRefusesTheFileTail(t *testing.T) {
+	dir := t.TempDir()
+	other := req
+	other.User = "What is DPoP?"
+
+	// A complete last record without a newline gets one before the append.
+	path := filepath.Join(dir, "unterminated.jsonl")
+	rec := &Recorder{Provider: fixed("first"), Path: path}
+	if _, err := rec.Complete(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	if err := os.WriteFile(path, bytes.TrimRight(data, "\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := rec.Complete(context.Background(), other); err != nil {
+		t.Fatal(err)
+	}
+	if replay, err := LoadReplay(path, "test/fixed"); err != nil || replay.Len() != 2 {
+		t.Errorf("after repair: %v", err)
+	}
+
+	// A partial last record is refused, and the file is left as it was.
+	path = filepath.Join(dir, "truncated.jsonl")
+	partial := data[:len(data)/2]
+	if err := os.WriteFile(path, partial, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	rec.Path = path
+	if _, err := rec.Complete(context.Background(), other); err == nil || !strings.Contains(err.Error(), "incomplete record") {
+		t.Errorf("truncated tail: err = %v", err)
+	}
+	if after, _ := os.ReadFile(path); !bytes.Equal(after, partial) {
+		t.Error("the truncated file was changed")
+	}
+}
+
+func TestRecorderMakesAnExistingFilePrivate(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "rec.jsonl")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o644); err != nil { // as a git checkout leaves it
+		t.Fatal(err)
+	}
+	rec := &Recorder{Provider: fixed("answer"), Path: path}
+	if _, err := rec.Complete(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	if info, _ := os.Stat(path); info.Mode().Perm() != 0o600 {
+		t.Errorf("mode %v, want 0600", info.Mode().Perm())
 	}
 }
