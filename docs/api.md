@@ -12,7 +12,7 @@ Errors are JSON with a matching status:
 
 | Code | Status | Meaning |
 | --- | --- | --- |
-| `bad_request` | 405 | The request uses the wrong method. |
+| `bad_request` | 405 | The request uses the wrong method; `Allow` lists the right ones. |
 | `not_found` | 404 | No such endpoint, RFC, or section. |
 
 ## `GET /api/meta`

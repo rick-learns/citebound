@@ -52,8 +52,12 @@ func New(cfg Config) (*Server, error) {
 	} {
 		s.mux.HandleFunc(route.method+" "+route.path, route.h)
 		// Without this, the /api/ catch-all below would answer 404.
+		allow := route.method
+		if allow == http.MethodGet {
+			allow += ", " + http.MethodHead // GET patterns also match HEAD
+		}
 		s.mux.HandleFunc(route.path, func(w http.ResponseWriter, _ *http.Request) {
-			w.Header().Set("Allow", route.method)
+			w.Header().Set("Allow", allow)
 			writeError(w, http.StatusMethodNotAllowed, "bad_request", "use "+route.method)
 		})
 	}

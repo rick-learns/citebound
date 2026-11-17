@@ -81,8 +81,16 @@ func TestWrongMethod(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusMethodNotAllowed || resp.Header.Get("Allow") != http.MethodGet {
-		t.Errorf("POST /api/meta: status %d, Allow %q; want 405, GET", resp.StatusCode, resp.Header.Get("Allow"))
+	if resp.StatusCode != http.StatusMethodNotAllowed || resp.Header.Get("Allow") != "GET, HEAD" {
+		t.Errorf("POST /api/meta: status %d, Allow %q; want 405, GET, HEAD", resp.StatusCode, resp.Header.Get("Allow"))
+	}
+	head, err := http.Head(ts.URL + "/api/meta") //nolint:noctx // test
+	if err != nil {
+		t.Fatal(err)
+	}
+	head.Body.Close()
+	if head.StatusCode != http.StatusOK {
+		t.Errorf("HEAD /api/meta: status %d, want 200", head.StatusCode)
 	}
 	if csp := resp.Header.Get("Content-Security-Policy"); !strings.Contains(csp, "default-src 'self'") {
 		t.Errorf("CSP = %q", csp)
