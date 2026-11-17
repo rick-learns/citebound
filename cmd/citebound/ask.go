@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -13,9 +12,6 @@ import (
 	"github.com/rick-learns/citebound/internal/index"
 	"github.com/rick-learns/citebound/internal/verify"
 )
-
-// passages is how many search results the answerer reads.
-const passages = 8
 
 func runAsk(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("ask", flag.ContinueOnError)
@@ -43,27 +39,29 @@ func runAsk(args []string, stdout, stderr io.Writer) int {
 		return fail(err)
 	}
 	defer ix.Close()
-	hits, err := ix.Search(ctx, question, passages)
-	if err != nil && !errors.Is(err, index.ErrEmptyQuery) {
-		return fail(err)
+	p := &answer.Pipeline{
+		Index:    ix,
+		Lookup:   verify.NewCorpusLookup(rfcs),
+		Answerer: answer.Extractive{},
+		Policy:   answer.DefaultPolicy,
 	}
-	text, err := answer.Extractive{}.Answer(ctx, question, hits)
+	res, err := p.Ask(ctx, question, nil)
 	if err != nil {
 		return fail(err)
 	}
-	claims, abstained := verify.ParseAnswer(text)
-	results := verify.VerifyAll(verify.NewCorpusLookup(rfcs), claims)
-	verified := 0
-	for _, r := range results {
+	if res.Abstained {
+		fmt.Fprintf(stdout, "The corpus does not support an answer to that question (%s).\n", res.Reason)
+		if len(res.Claims) == 0 {
+			return 0
+		}
+		fmt.Fprint(stdout, "\nWithheld claims, for transparency:\n\n")
+	}
+	for _, r := range res.Claims {
 		if r.Status == verify.Verified {
-			verified++
 			fmt.Fprintf(stdout, "✓ %s\n  %s\n\n", r.Claim.Text, r.Claim.Ref)
 		} else {
 			fmt.Fprintf(stdout, "✗ %s\n  struck: %s\n\n", r.Claim.Text, r.Reason)
 		}
-	}
-	if abstained || verified == 0 {
-		fmt.Fprintln(stdout, "The corpus does not support an answer to that question.")
 	}
 	return 0
 }
