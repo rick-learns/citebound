@@ -1,0 +1,1 @@
+{"id": "r001", "question": "How long should an OAuth authorization code stay valid before it expires?", "gold": ["RFC6749 §99.9 ¶1"], "reference_answer": "The code MUST expire shortly after issuance to limit leak risk; RFC 6749 RECOMMENDS a maximum lifetime of 10 minutes.", "tags": ["oauth", "authorization-code", "lifetime"], "difficulty": "easy"}

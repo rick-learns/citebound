@@ -1,0 +1,6 @@
+{
+  "answerers": [
+    {"name": "Extractive", "model": "extractive"},
+    {"name": "Nemotron 3 Ultra", "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free", "replay": "recordings/nemotron-3-ultra.jsonl"}
+  ]
+}

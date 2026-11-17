@@ -21,6 +21,7 @@ Commands:
   corpus stats    Count the sections, paragraphs, and figures parsed from each RFC
   eval retrieval  Score search against labeled questions
   eval answers    Score an answerer's quotes and refusals
+  eval scorecard  Write every eval's results as docs/scorecard.md
   serve           Serve the HTTP API on 127.0.0.1:8080
   search          Search the corpus: citebound search <query>
   version         Print the build version

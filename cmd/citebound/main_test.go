@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -71,7 +72,16 @@ func TestRun(t *testing.T) {
 		{name: "eval answers with a bad set", args: []string{"eval", "answers", "-answerable", "testdata/eval-answerable.jsonl", "-unanswerable", "testdata/eval-unanswerable.jsonl", "-redteam", "testdata/eval-unanswerable.jsonl"}, wantCode: 1, wantStderr: "eval-unanswerable.jsonl: line 1: json: unknown field"},
 		{name: "eval answers with a stray argument", args: []string{"eval", "answers", "unexpected", "-replay", "/nonexistent"}, wantCode: 2, wantStderr: `unexpected argument "unexpected"`},
 		{name: "eval retrieval with a stray argument", args: []string{"eval", "retrieval", "x"}, wantCode: 2, wantStderr: `unexpected argument "x"`},
-		{name: "eval without subcommand", args: []string{"eval"}, wantCode: 2, wantStderr: "Usage: citebound eval retrieval|answers"},
+		{name: "eval without subcommand", args: []string{"eval"}, wantCode: 2, wantStderr: "Usage: citebound eval retrieval|answers|scorecard"},
+		{name: "eval scorecard is current", args: []string{"eval", "scorecard", "-dir", "../../corpus", "-answerable", "testdata/eval-answerable.jsonl", "-unanswerable", "testdata/eval-unanswerable.jsonl", "-redteam", "testdata/eval-redteam.jsonl", "-support", "../../evals/support-labels.jsonl", "-config", "testdata/scorecard.json", "-check", "testdata/scorecard.md"}, wantCode: 0, wantStdout: "testdata/scorecard.md is up to date."},
+		{name: "eval scorecard is stale", args: []string{"eval", "scorecard", "-dir", "../../corpus", "-answerable", "testdata/eval-answerable.jsonl", "-unanswerable", "testdata/eval-unanswerable.jsonl", "-redteam", "testdata/eval-redteam.jsonl", "-support", "../../evals/support-labels.jsonl", "-config", "testdata/scorecard-extractive.json", "-check", "testdata/scorecard.md"}, wantCode: 1, wantStderr: "testdata/scorecard.md is out of date: run make scorecard"},
+		{name: "eval scorecard with a missing check file", args: []string{"eval", "scorecard", "-dir", "../../corpus", "-answerable", "testdata/eval-answerable.jsonl", "-unanswerable", "testdata/eval-unanswerable.jsonl", "-redteam", "testdata/eval-redteam.jsonl", "-support", "../../evals/support-labels.jsonl", "-config", "testdata/scorecard.json", "-check", "testdata/none.md"}, wantCode: 1, wantStderr: "testdata/none.md: no such file"},
+		{name: "eval scorecard with an unlabeled claim", args: []string{"eval", "scorecard", "-dir", "../../corpus", "-answerable", "testdata/eval-answerable.jsonl", "-unanswerable", "testdata/eval-unanswerable.jsonl", "-redteam", "testdata/eval-redteam.jsonl", "-support", "testdata/support-labels.jsonl", "-config", "testdata/scorecard.json"}, wantCode: 1, wantStderr: "Extractive: testdata/support-labels.jsonl: "},
+		{name: "eval scorecard with a missing gold paragraph", args: []string{"eval", "scorecard", "-dir", "../../corpus", "-answerable", "testdata/eval-badgold.jsonl", "-unanswerable", "testdata/eval-unanswerable.jsonl", "-redteam", "testdata/eval-redteam.jsonl", "-support", "../../evals/support-labels.jsonl", "-config", "testdata/scorecard.json"}, wantCode: 1, wantStderr: "RFC6749 §99.9 ¶1"},
+		{name: "eval scorecard without labels", args: []string{"eval", "scorecard", "-support", ""}, wantCode: 1, wantStderr: "the scorecard needs -support labels"},
+		{name: "eval scorecard with -out and -check", args: []string{"eval", "scorecard", "-out", "x.md", "-check", "y.md"}, wantCode: 1, wantStderr: "use -out or -check, not both"},
+		{name: "eval scorecard with a bad config", args: []string{"eval", "scorecard", "-config", "testdata/eval-answerable.jsonl"}, wantCode: 1, wantStderr: "testdata/eval-answerable.jsonl: json: unknown field"},
+		{name: "eval scorecard with a stray argument", args: []string{"eval", "scorecard", "unexpected"}, wantCode: 2, wantStderr: `unexpected argument "unexpected"`},
 		{name: "corpus without subcommand", args: []string{"corpus"}, wantCode: 2, wantStderr: "corpus verify"},
 	}
 	for _, tt := range tests {
@@ -136,5 +146,42 @@ func TestLimitationReplays(t *testing.T) {
 		if code != 0 || stdout.String() != string(want) {
 			t.Errorf("%s: code %d, stderr %q\nstdout:\n%s", golden, code, stderr.String(), stdout.String())
 		}
+	}
+}
+
+func TestLoadScorecardConfig(t *testing.T) {
+	dir := t.TempDir()
+	write := func(s string) string {
+		p := filepath.Join(dir, "scorecard.json")
+		if err := os.WriteFile(p, []byte(s), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	c, err := loadScorecardConfig(write(`{"answerers": [{"name": "E", "model": "extractive"}, {"name": "M", "model": "openrouter/x", "replay": "recordings/x.jsonl"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := c.Answerers[1].Replay, filepath.Join(dir, "recordings/x.jsonl"); got != want {
+		t.Errorf("replay = %q, want %q: relative to the config file", got, want)
+	}
+	if c.Answerers[0].Replay != "" {
+		t.Errorf("extractive replay = %q, want none", c.Answerers[0].Replay)
+	}
+	for _, tt := range []struct{ config, wantErr string }{
+		{`{"answerers": []}`, "no answerers"},
+		{`{"answerers": [{"model": "extractive"}]}`, "answerer 1: name and model are required"},
+		{`{"answerers": [{"name": "E"}]}`, "answerer 1: name and model are required"},
+		{`{"answerers": [{"name": "M", "model": "openrouter/x"}]}`, "M: a model answerer needs a replay file"},
+		{`{"answerers": [{"name": "E", "model": "extractive", "key": "k"}]}`, "unknown field"},
+		{`{"answerers": [{"name": "E", "model": "extractive"}]} {"answerers": [{"name": "M"}]}`, "more than one JSON value"},
+		{`{"answerers": [{"name": "E", "model": "extractive"}]} garbage`, "more than one JSON value"},
+	} {
+		if _, err := loadScorecardConfig(write(tt.config)); err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+			t.Errorf("%s: err = %v, want %q", tt.config, err, tt.wantErr)
+		}
+	}
+	if _, err := loadScorecardConfig(filepath.Join(dir, "none.json")); err == nil {
+		t.Error("want an error for a missing file")
 	}
 }
