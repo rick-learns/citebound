@@ -1,0 +1,2 @@
+Authorization codes must expire soon after they are issued. [RFC6749 §4.1.2 ¶2: "The authorization code MUST expire shortly after it is issued to mitigate the risk of leaks."]
+Authorization codes must expire within 60 seconds. [RFC6749 §4.1.2 ¶2: "The authorization code MUST expire within 60 seconds of being issued."]

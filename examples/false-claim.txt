@@ -1,0 +1,1 @@
+Refresh tokens may be sent to resource servers. [RFC6749 §1.5 ¶2: "refresh tokens are intended for use only with authorization servers and are never sent to resource servers"]

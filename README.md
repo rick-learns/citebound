@@ -12,20 +12,40 @@ The check proves a quote is real, not that it supports the claim beside it: a
 true quote can sit next to a false claim and still pass. See
 [what verification proves](docs/answer-format.md#what-verification-proves).
 
-```console
-$ citebound ask "Can a refresh token be bound to a client?"
-✓ As a result, refresh tokens are indirectly certificate-bound by way of the client ID and the associated requirement for (certificate-based) authentication to the AS when issued to clients utilizing the "tls_client_auth" or "self_signed_tls_client_auth" methods of client authentication.
-  RFC8705 §7.1 ¶1
+Try it with no API key. Requires Go 1.26 or later, and Node.js 24 for the web
+tests.
 
-✓ The refresh token is also a secret bound to the client identifier and client instance that originally requested the authorization; the refresh token also represents the original resource owner grant.
-  RFC6819 §3.3 ¶3
-...
+```sh
+make demo   # four answers: a real model's, a refusal, a struck fake quote, and a false claim that passes
+make test   # Go and web tests
 ```
 
+```console
+$ citebound ask -model openrouter/nvidia/nemotron-3-ultra-550b-a55b:free \
+    -replay evals/recordings/nemotron-3-ultra.jsonl "Can a refresh token be bound to a client?"
+✓ Refresh tokens are bound to the client to which they were issued.
+  RFC6749 §6 ¶5
+
+✓ The OAuth 2.0 framework requires authorization servers to bind refresh tokens to the client.
+  RFC8705 §7.1 ¶1
+
+✓ Refresh tokens are secrets bound to the client identifier and client instance.
+  RFC6819 §3.3 ¶3
+
+$ citebound check examples/fabricated-quote.txt
+✓ Authorization codes must expire soon after they are issued.
+  RFC6749 §4.1.2 ¶2
+
+✗ Authorization codes must expire within 60 seconds.
+  struck: quote-not-found
+```
+
+The first answer is a real model's, recorded once and replayed, so it runs
+offline. The second is hand-written: no model in the recordings has yet
+invented a quote, so the demo shows the check on a made-up one.
+
 > [!NOTE]
-> Work in progress. The answer above comes from the extractive answerer,
-> which quotes sentences and needs no API key. Model answerers, the web UI,
-> and the eval scorecard are next. See the
+> Work in progress. The web UI and the full eval scorecard are next. See the
 > [milestones](https://github.com/rick-learns/citebound/milestones).
 
 ## How it works
@@ -55,9 +75,7 @@ pull request and fails if recall@5 or MRR drops below the committed baseline.
 | --- | --- | --- |
 | 0.52 | 0.65 | 0.44 |
 
-## Try it
-
-Requires Go 1.26 or later.
+## More commands
 
 ```sh
 go run ./cmd/citebound ask "Should access tokens be sent in the URI query?"
