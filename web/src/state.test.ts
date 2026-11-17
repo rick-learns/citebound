@@ -64,6 +64,27 @@ describe("reduce", () => {
     expect(s.done).toEqual(DONE);
   });
 
+  it("keeps the first claim when an id repeats", () => {
+    const s = run(
+      { type: "start", question: "q" },
+      ev(claim(0)),
+      ev({ type: "claim", data: { id: 0, text: "Something else.", ref: "", quote: "other" } }),
+      ev(verdict(0, "verified")),
+    );
+    expect(s.claims).toHaveLength(1);
+    expect(s.claims[0]).toMatchObject({ text: "claim 0", quote: "q", status: "verified" });
+  });
+
+  it("never lets a second verdict override the first", () => {
+    const s = run(
+      { type: "start", question: "q" },
+      ev(claim(0)),
+      ev(verdict(0, "struck", "quote-not-found")),
+      ev(verdict(0, "verified")),
+    );
+    expect(s.claims[0]).toMatchObject({ status: "struck", reason: "quote-not-found" });
+  });
+
   it("ignores verdicts for unknown claims", () => {
     const s = run({ type: "start", question: "q" }, ev(claim(0)), ev(verdict(9, "verified")));
     expect(s.claims.map((c) => c.status)).toEqual(["pending"]);

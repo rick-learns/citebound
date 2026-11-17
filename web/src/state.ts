@@ -67,17 +67,16 @@ function applyEvent(state: AnswerState, event: AskEvent): AnswerState {
     case "retrieval":
       return { ...state, passages: event.passages };
     case "claim": {
+      // The server never repeats an id. If one repeats, keep the first claim, so a verdict is
+      // never applied to text it did not judge.
+      if (state.claims.some((c) => c.id === event.data.id)) return state;
       const claim: ClaimState = { ...event.data, status: "pending", reason: "" };
-      const exists = state.claims.some((c) => c.id === claim.id);
-      return {
-        ...state,
-        claims: exists
-          ? state.claims.map((c) => (c.id === claim.id ? claim : c))
-          : [...state.claims, claim],
-      };
+      return { ...state, claims: [...state.claims, claim] };
     }
     case "verdict": {
+      // Only a pending claim takes a verdict: a second verdict never overrides the first.
       const { id, status, reason } = event.data;
+      if (!state.claims.some((c) => c.id === id && c.status === "pending")) return state;
       return {
         ...state,
         claims: state.claims.map((c) => (c.id === id ? { ...c, status, reason } : c)),
