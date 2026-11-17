@@ -1,12 +1,16 @@
 # Citebound
 
-An RFC assistant that cannot fake a citation.
+An RFC assistant that checks every quotation against pinned RFC text.
 
 Ask a question about OAuth 2.0, JOSE and JWT, or HTTP. Every claim in the
 answer cites one paragraph of a pinned RFC and quotes it word for word. Code,
 not a model, checks that each quote really is in the paragraph it cites.
 Claims that fail are struck out, and if nothing survives, Citebound says the
 corpus does not support an answer.
+
+The check proves a quote is real, not that it supports the claim beside it: a
+true quote can sit next to a false claim and still pass. See
+[what verification proves](docs/answer-format.md#what-verification-proves).
 
 ```console
 $ citebound ask "Can a refresh token be bound to a client?"
