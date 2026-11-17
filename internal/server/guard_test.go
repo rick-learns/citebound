@@ -137,6 +137,9 @@ func TestGuardSettings(t *testing.T) {
 		{Config{AskRate: minAskRate / 2}, false},
 		{Config{AskRate: 1e-9}, false},
 		{Config{AskBurst: -1}, false},
+		{Config{AskRate: 1, AskBurst: maxAskBurst}, true},
+		{Config{AskRate: 1, AskBurst: maxAskBurst + 1}, false},
+		{Config{AskRate: 1, AskBurst: math.MaxInt}, false},
 		{Config{MaxInFlight: -1}, false},
 	} {
 		c.cfg.Pipeline = &answer.Pipeline{}

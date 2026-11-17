@@ -24,6 +24,10 @@ const sweepEvery = time.Second
 // minAskRate is the slowest supported rate: one ask a day.
 const minAskRate = 1.0 / (24 * 60)
 
+// maxAskBurst is the largest supported burst. A larger one is no limit, and
+// near 2^53 the float bucket stops changing when a token is taken.
+const maxAskBurst = 1_000_000
+
 // validateGuards rejects settings that would silently disable a guard or
 // overflow its arithmetic. Zero disables a guard; nothing else does.
 func (c Config) validateGuards() error {
@@ -32,8 +36,8 @@ func (c Config) validateGuards() error {
 		return fmt.Errorf("server: ask rate %v: want a finite number of asks a minute, or 0 to disable", c.AskRate)
 	case c.AskRate > 0 && c.AskRate < minAskRate:
 		return fmt.Errorf("server: ask rate %v: want at least one ask a day (%.6f a minute), or 0 to disable", c.AskRate, minAskRate)
-	case c.AskBurst < 0:
-		return errors.New("server: ask burst must not be negative")
+	case c.AskBurst < 0 || c.AskBurst > maxAskBurst:
+		return fmt.Errorf("server: ask burst %d: want 0 to %d", c.AskBurst, maxAskBurst)
 	case c.MaxInFlight < 0:
 		return errors.New("server: max in flight must not be negative, or 0 to disable")
 	}

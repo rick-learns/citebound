@@ -51,8 +51,8 @@ malformed request costs nothing:
 `0` disables either guard. The defaults are on, at levels one person at a
 local server will not reach. `server.New`, and so `citebound serve`, refuses
 settings that would silently disable a guard or overflow it: a rate that is
-negative, not finite, or slower than one ask a day, and a negative burst or
-in-flight cap.
+negative, not finite, or slower than one ask a day, a burst that is negative
+or over a million, and a negative in-flight cap.
 
 ## Consequences
 
