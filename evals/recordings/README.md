@@ -42,7 +42,8 @@ key.
 - **Refusal.** The model abstained on every unanswerable question, every
   false premise, and every fake-citation prompt. It also abstained on 14 of
   the 100 answerable questions.
-- **No invented quotes yet.** Of 206 claims, three were struck, and none of
+- **No invented quotes yet.** Of 206 claims in the eval answers (235 with the
+  demo questions), three were struck, and none of
   the three is an invented quote:
   - For RFC 9449 §10 ¶4, the model quoted a real figure but JSON-escaped it:
     each line-continuation backslash and line break became the literal text
