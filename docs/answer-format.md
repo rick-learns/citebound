@@ -49,4 +49,5 @@ See [decision 0006](decisions/0006-abstention-policy.md).
 
 Verification proves the quote is real. Whether it supports the claim is a
 separate question, measured by the faithfulness eval. See
-[decision 0005](decisions/0005-exact-quote-verification.md).
+[decision 0005](decisions/0005-exact-quote-verification.md), and
+[the limitations](limitations.md) for examples of both kinds of mistake.

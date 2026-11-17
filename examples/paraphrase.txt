@@ -1,0 +1,1 @@
+Authorization codes must expire soon after they are issued. [RFC6749 §4.1.2 ¶2: "The authorization code MUST expire soon after it is issued, to reduce the risk of leaks."]
