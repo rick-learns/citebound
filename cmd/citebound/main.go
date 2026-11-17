@@ -9,7 +9,7 @@ import (
 	"github.com/rick-learns/citebound/internal/version"
 )
 
-const usage = `citebound: an RFC assistant that cannot fake a citation
+const usage = `citebound: an RFC assistant that checks every quotation against pinned RFC text
 
 Usage:
   citebound <command> [flags]
