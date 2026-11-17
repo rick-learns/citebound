@@ -105,7 +105,7 @@ describe("createAnswerView", () => {
   });
 
   it.each([
-    ["rate_limited", "Too many questions at once"],
+    ["rate_limited", "Too many questions"],
     ["not_recorded", "No recorded answer"],
     ["budget_exhausted", "Live mode is paused"],
     ["bad_request", "That question couldn't be processed"],
