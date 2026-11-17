@@ -19,6 +19,7 @@ linters:
         - name: exported
           arguments: [disableStutteringCheck]
   exclusions:
+    paths: [web/node_modules]
     presets: [comments, std-error-handling]
     rules:
       # Tests build fixtures with literal paths on purpose.
@@ -26,3 +27,5 @@ linters:
         linters: [gosec]
 formatters:
   enable: [gofmt, goimports]
+  exclusions:
+    paths: [web/node_modules]
