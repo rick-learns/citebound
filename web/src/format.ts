@@ -96,6 +96,11 @@ export function friendlyError(error: ErrorInfo): FriendlyError {
       };
     case "not_found":
       return { title: "Not found", hint: "That section isn't in the corpus." };
+    case "not_recorded":
+      return {
+        title: "No recorded answer",
+        hint: "This server replays recorded answers, so it can answer only the recorded questions. Try one of the examples.",
+      };
     // Client-only codes (api.ts): the request failed, or the stream ended before done.
     case "incomplete":
       return {

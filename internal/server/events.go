@@ -9,6 +9,7 @@ import (
 
 	"github.com/rick-learns/citebound/internal/answer"
 	"github.com/rick-learns/citebound/internal/index"
+	"github.com/rick-learns/citebound/internal/llm"
 )
 
 // eventStream writes server-sent events and flushes each one.
@@ -129,10 +130,18 @@ func (s *Server) answer(ctx context.Context, stream *eventStream, question strin
 	}
 	if err != nil {
 		code, msg := "internal", "Something went wrong while answering."
-		if errors.Is(err, context.DeadlineExceeded) {
+		switch {
+		case errors.Is(err, context.DeadlineExceeded):
 			code, msg = "unavailable", "Answering took too long. Try again."
+		case errors.Is(err, llm.ErrNotRecorded):
+			// Expected in replay mode for any question outside the recordings, so not a fault.
+			code, msg = "not_recorded", "No answer was recorded for this question."
 		}
-		if !errors.Is(err, context.Canceled) {
+		switch {
+		case errors.Is(err, context.Canceled):
+		case code == "not_recorded":
+			s.cfg.Logger.Info("ask not recorded", "err", err)
+		default:
 			s.cfg.Logger.Error("ask failed", "err", err)
 		}
 		_ = stream.send("error", errorBody{Code: code, Message: msg})
