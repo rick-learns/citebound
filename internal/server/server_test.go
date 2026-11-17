@@ -299,23 +299,33 @@ func TestAskRejectsBadRequests(t *testing.T) {
 		"empty":          `{"question":"   "}`,
 		"too long":       `{"question":"` + strings.Repeat("a", MaxQuestionRunes+1) + `"}`,
 		"too big a body": `{"question":"` + strings.Repeat("a", 20<<10) + `"}`,
+		"invalid utf-8":  "{\"question\":\"refresh token \xff rotation\"}",
 	} {
 		if r, _ := ask(t, ts, body); r.status != http.StatusBadRequest {
 			t.Errorf("%s: status %d, want 400", name, r.status)
 		}
 	}
 
-	resp, err := http.Post(ts.URL+"/api/ask", "text/plain", strings.NewReader(`{"question":"q"}`)) //nolint:noctx // test
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, _ = io.Copy(io.Discard, resp.Body)
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusUnsupportedMediaType {
-		t.Errorf("text/plain: status %d, want 415", resp.StatusCode)
+	for ct, want := range map[string]int{
+		"text/plain":                      http.StatusUnsupportedMediaType,
+		"application/jsonp":               http.StatusUnsupportedMediaType,
+		"application/json; broken":        http.StatusUnsupportedMediaType,
+		"":                                http.StatusUnsupportedMediaType,
+		"Application/JSON":                http.StatusOK,
+		"application/json; charset=utf-8": http.StatusOK,
+	} {
+		resp, err := http.Post(ts.URL+"/api/ask", ct, strings.NewReader(`{"question":"refresh token rotation"}`)) //nolint:noctx // test
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != want {
+			t.Errorf("Content-Type %q: status %d, want %d", ct, resp.StatusCode, want)
+		}
 	}
 
-	resp, err = http.Get(ts.URL + "/api/ask") //nolint:noctx // test
+	resp, err := http.Get(ts.URL + "/api/ask") //nolint:noctx // test
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,11 +3,13 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
+	"mime"
 	"net/http"
 	"strconv"
 	"strings"
@@ -160,12 +162,19 @@ type askRequest struct {
 }
 
 func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
-	if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
 		writeError(w, http.StatusUnsupportedMediaType, "bad_request", "send the question as application/json")
 		return
 	}
+	// Read the raw body first: encoding/json replaces invalid UTF-8 with
+	// U+FFFD, so it must be rejected before decoding.
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
+	if err != nil || !utf8.Valid(raw) {
+		writeError(w, http.StatusBadRequest, "bad_request", `send {"question": "..."} as UTF-8 JSON of at most 16 KiB`)
+		return
+	}
 	var req askRequest
-	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBodyBytes))
+	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil || dec.Decode(&struct{}{}) != io.EOF {
 		writeError(w, http.StatusBadRequest, "bad_request", `send {"question": "..."}`)
@@ -176,8 +185,8 @@ func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
 	case q == "":
 		writeError(w, http.StatusBadRequest, "bad_request", "the question is empty")
 		return
-	case !utf8.ValidString(q) || utf8.RuneCountInString(q) > MaxQuestionRunes:
-		writeError(w, http.StatusBadRequest, "bad_request", "the question must be valid text of at most "+strconv.Itoa(MaxQuestionRunes)+" characters")
+	case utf8.RuneCountInString(q) > MaxQuestionRunes:
+		writeError(w, http.StatusBadRequest, "bad_request", "the question must be at most "+strconv.Itoa(MaxQuestionRunes)+" characters")
 		return
 	}
 

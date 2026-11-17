@@ -12,7 +12,7 @@ Errors outside a stream are JSON with a matching status:
 
 | Code | Status | Meaning |
 | --- | --- | --- |
-| `bad_request` | 400, 405, 415 | The request is malformed, uses the wrong method (`Allow` lists the right ones), or is not JSON. |
+| `bad_request` | 400, 405, 415 | The request is malformed or not UTF-8, uses the wrong method (`Allow` lists the right ones), or its media type is not `application/json`. |
 | `not_found` | 404 | No such endpoint, RFC, or section. |
 | `rate_limited`, `budget_exhausted` | 429, 503 | Reserved for the public demo's guards. |
 | `unavailable`, `internal` | 503, 500 | The answer timed out or failed. |
