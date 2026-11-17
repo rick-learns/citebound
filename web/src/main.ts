@@ -1,6 +1,4 @@
-import { renderShell } from "./shell";
+import { mountApp } from "./app";
 
 const root = document.querySelector<HTMLElement>("#app");
-if (root) {
-  renderShell(root);
-}
+if (root) mountApp(root);
