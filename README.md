@@ -73,7 +73,7 @@ podman build -t citebound . && podman run --rm -p 8080:8080 citebound   # or doc
 ```
 
 > [!NOTE]
-> Work in progress toward v0.1.0. See the
+> v0.1.0 is the first release. Planned work is in the
 > [milestones](https://github.com/rick-learns/citebound/milestones).
 
 ## How it works
@@ -93,6 +93,9 @@ podman build -t citebound . && podman run --rm -p 8080:8080 citebound   # or doc
 
 Verification proves that a quote is real. It does not prove that the quote
 supports the claim; that is what the evals measure.
+
+[The architecture](docs/architecture.md) has a diagram of the pipeline and a
+map of the packages.
 
 ## Evals
 
@@ -129,6 +132,7 @@ go run ./cmd/citebound ask -model openrouter/nvidia/nemotron-3-ultra-550b-a55b:f
 
 ## Documentation
 
+- [Architecture](docs/architecture.md)
 - [Answer format](docs/answer-format.md)
 - [HTTP API](docs/api.md)
 - [Container](docs/container.md)

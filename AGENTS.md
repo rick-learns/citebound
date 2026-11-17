@@ -10,8 +10,8 @@ Citebound answers questions about a fixed set of IETF RFCs. It is designed
 so that every claim in an answer carries a citation and a verbatim quote, and
 deterministic code checks that the quote exists in the cited paragraph.
 Claims that fail are struck. The project's value is that this guarantee is
-real and measured, so protect it. The milestones on GitHub track which parts
-exist today; the invariants below apply as each part lands.
+real and measured, so protect it. [The architecture](docs/architecture.md)
+maps the packages to the pipeline.
 
 ## Commands
 
