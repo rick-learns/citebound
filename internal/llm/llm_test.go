@@ -118,14 +118,23 @@ func TestErrors(t *testing.T) {
 		})
 	}
 
-	for name, reply := range map[string]string{
-		"anthropic": `{"content":[],"usage":{}}`,
-		"openai":    `{"choices":[]}`,
+	for _, tt := range []struct {
+		name, reply string
+		limit       bool
+	}{
+		{"anthropic", `{"content":[],"usage":{}}`, false},
+		{"anthropic at the limit", `{"content":[{"type":"thinking","thinking":"..."}],"stop_reason":"max_tokens"}`, true},
+		{"openai", `{"choices":[]}`, false},
+		{"openai at the limit", `{"choices":[{"message":{"content":""},"finish_reason":"length"}]}`, true},
 	} {
-		api := &fakeAPI{status: 200, reply: reply}
-		p := map[string]func(string) Provider{"anthropic": anthropicAt, "openai": openAIAt}[name](api.start(t))
-		if _, err := p.Complete(context.Background(), req); !errors.Is(err, ErrEmpty) {
-			t.Errorf("%s empty reply: err = %v, want ErrEmpty", name, err)
+		provider := anthropicAt
+		if strings.HasPrefix(tt.name, "openai") {
+			provider = openAIAt
+		}
+		api := &fakeAPI{status: 200, reply: tt.reply}
+		_, err := provider(api.start(t)).Complete(context.Background(), req)
+		if !errors.Is(err, ErrEmpty) || strings.Contains(fmt.Sprint(err), "token limit") != tt.limit {
+			t.Errorf("%s: err = %v", tt.name, err)
 		}
 	}
 }

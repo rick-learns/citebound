@@ -57,6 +57,11 @@ BM25 over paragraphs, with section titles weighted 3x:
 rule in different words, or a long paragraph that states the rule ranks below
 short ones that only mention its terms. `make eval` lists them.
 
+## Recordings
+
+[`recordings/`](recordings/README.md) holds real model answers, replayed with
+no API key so model answerers can be tested and scored offline.
+
 ## Known limitations
 
 - **Gold is sufficient, not exhaustive.** The corpus repeats itself. For

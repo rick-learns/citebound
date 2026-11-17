@@ -23,6 +23,11 @@ Errors outside a stream are JSON with a matching status:
 {"version": "v0.1.0", "mode": "extractive", "model": "", "rfcs": [{"number": 6749, "title": "The OAuth 2.0 Authorization Framework"}]}
 ```
 
+`mode` is `extractive` (no model), `model` (a live model), or `replay`
+(a model's recorded answers, with no network). `model` names the model, such
+as `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free`, and is empty for
+`extractive`.
+
 ## `GET /api/section?rfc=6749&section=10.4`
 
 Every paragraph of one section, for the citation panel. Figures keep their
