@@ -174,9 +174,9 @@ var stopwords = map[string]bool{
 	"why": true, "with": true, "you": true, "my": true, "we": true, "there": true,
 }
 
-// matchExpr turns free text into an FTS5 query: every non-stopword term,
-// quoted so FTS5 operators in user input are inert, joined with OR.
-func matchExpr(query string) string {
+// Terms returns the distinct searchable words of query, lowercased, in
+// order, without stopwords.
+func Terms(query string) []string {
 	seen := map[string]bool{}
 	var terms []string
 	for _, w := range wordPattern.FindAllString(strings.ToLower(query), -1) {
@@ -184,7 +184,17 @@ func matchExpr(query string) string {
 			continue
 		}
 		seen[w] = true
-		terms = append(terms, `"`+w+`"`)
+		terms = append(terms, w)
+	}
+	return terms
+}
+
+// matchExpr turns free text into an FTS5 query: every term, quoted so FTS5
+// operators in user input are inert, joined with OR.
+func matchExpr(query string) string {
+	terms := Terms(query)
+	for i, t := range terms {
+		terms[i] = `"` + t + `"`
 	}
 	return strings.Join(terms, " OR ")
 }
