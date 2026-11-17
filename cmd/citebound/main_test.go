@@ -7,8 +7,18 @@ import (
 	"testing"
 )
 
+// TestMain clears the API keys, so the no-key cases do not depend on the
+// environment. t.Setenv would do it per test, but forbids t.Parallel.
+func TestMain(m *testing.M) {
+	for _, v := range apiKeyVars {
+		_ = os.Unsetenv(v)
+	}
+	os.Exit(m.Run())
+}
+
+// TestRun runs its cases in parallel: each builds its own index, which is
+// slow under the race detector.
 func TestRun(t *testing.T) {
-	t.Setenv("ANTHROPIC_API_KEY", "") // the no-key case must not depend on the environment
 	tests := []struct {
 		name       string
 		args       []string
@@ -63,6 +73,7 @@ func TestRun(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var stdout, stderr bytes.Buffer
 			if got := run(tt.args, &stdout, &stderr); got != tt.wantCode {
 				t.Errorf("exit code = %d, want %d", got, tt.wantCode)
