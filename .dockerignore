@@ -11,3 +11,6 @@ web/dist/
 !evals/recordings/
 **/*_test.go
 **/testdata/
+# Never send local secrets, even from an included directory.
+**/.env
+**/.env.*

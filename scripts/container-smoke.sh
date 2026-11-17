@@ -13,11 +13,19 @@ model=openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
 "$engine" build -q --build-arg VERSION=smoke -t "$image" . >/dev/null
 trap '"$engine" rm -f "$name" >/dev/null 2>&1 || true' EXIT
 
-# expect <text> <command...>: run the command and check its output.
+# expect <text> <command...>: run the command, which must succeed, and check
+# its standard output. Standard error is shown on failure but never matched.
 expect() {
 	want=$1
 	shift
-	out=$("$@" 2>&1) || true
+	err=$(mktemp)
+	if ! out=$("$@" 2>"$err"); then
+		printf 'container-smoke: failed: %s\n' "$*" >&2
+		cat "$err" >&2
+		rm -f "$err"
+		exit 1
+	fi
+	rm -f "$err"
 	case $out in
 	*"$want"*) printf 'ok: %s\n' "$want" ;;
 	*)
