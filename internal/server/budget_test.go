@@ -24,8 +24,13 @@ func TestBudget(t *testing.T) {
 	if warnings != 0 {
 		t.Fatal("warned before any answer fell back")
 	}
-	if !b.exhausted() || !b.exhausted() || warnings != 1 {
-		t.Fatalf("two calls in flight: %d warnings after two fallbacks; want exhausted, 1", warnings)
+	for range 2 {
+		if !b.exhausted() {
+			t.Fatal("two calls in flight: not exhausted")
+		}
+	}
+	if warnings != 1 {
+		t.Fatalf("%d warnings after two fallbacks, want 1", warnings)
 	}
 	b.settle(day, 3741)
 	b.settle(second, 3741)
