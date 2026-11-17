@@ -20,6 +20,7 @@ Commands:
   corpus verify   Check the pinned RFC files against their checksums
   corpus stats    Count the sections, paragraphs, and figures parsed from each RFC
   eval retrieval  Score search against labeled questions
+  eval answers    Score an answerer's quotes and refusals
   serve           Serve the HTTP API on 127.0.0.1:8080
   search          Search the corpus: citebound search <query>
   version         Print the build version
