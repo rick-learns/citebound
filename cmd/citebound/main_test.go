@@ -7,6 +7,7 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	t.Setenv("ANTHROPIC_API_KEY", "") // the no-key case must not depend on the environment
 	tests := []struct {
 		name       string
 		args       []string
@@ -26,6 +27,13 @@ func TestRun(t *testing.T) {
 		{name: "search with only stopwords", args: []string{"search", "-dir", "../../corpus", "what is the"}, wantCode: 1, wantStderr: "no searchable words"},
 		{name: "ask", args: []string{"ask", "-dir", "../../corpus", "Can a refresh token be bound to a client?"}, wantCode: 0, wantStdout: "✓ "},
 		{name: "ask off topic", args: []string{"ask", "-dir", "../../corpus", "How do I bake sourdough bread?"}, wantCode: 0, wantStdout: "does not support an answer"},
+		{name: "ask replayed model", args: []string{"ask", "-dir", "../../corpus", "-model", "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free", "-replay", "../../evals/recordings/nemotron-3-ultra.jsonl", "Can a refresh token be bound to a client?"}, wantCode: 0, wantStdout: "✓ "},
+		{name: "ask replayed model, struck quotes", args: []string{"ask", "-dir", "../../corpus", "-model", "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free", "-replay", "../../evals/recordings/nemotron-3-ultra.jsonl", "What claims must a JWT access token contain?"}, wantCode: 0, wantStdout: "struck: quote-not-found"},
+		{name: "ask replay miss", args: []string{"ask", "-dir", "../../corpus", "-model", "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free", "-replay", "../../evals/recordings/nemotron-3-ultra.jsonl", "A question nobody recorded about tokens"}, wantCode: 1, wantStderr: "no recording for this request"},
+		{name: "ask model without key", args: []string{"ask", "-model", "anthropic/claude-sonnet-5-5", "q"}, wantCode: 1, wantStderr: "needs ANTHROPIC_API_KEY"},
+		{name: "ask unknown provider", args: []string{"ask", "-model", "acme/m", "q"}, wantCode: 1, wantStderr: "want extractive"},
+		{name: "ask record and replay", args: []string{"ask", "-model", "openai/m", "-record", "a", "-replay", "b", "q"}, wantCode: 1, wantStderr: "not both"},
+		{name: "ask replay without model", args: []string{"ask", "-replay", "b", "q"}, wantCode: 1, wantStderr: "need -model"},
 		{name: "ask without question", args: []string{"ask"}, wantCode: 2, wantStderr: "Usage: citebound ask"},
 		{name: "eval retrieval", args: []string{"eval", "retrieval", "-dir", "../../corpus", "-set", "../../evals/retrieval.jsonl", "-thresholds", "../../evals/thresholds.json"}, wantCode: 0, wantStdout: "Above the thresholds"},
 		{name: "eval retrieval below thresholds", args: []string{"eval", "retrieval", "-dir", "../../corpus", "-set", "../../evals/retrieval.jsonl", "-thresholds", "testdata/high-thresholds.json"}, wantCode: 1, wantStderr: "below"},

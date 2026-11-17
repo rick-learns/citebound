@@ -65,6 +65,10 @@ go run ./cmd/citebound search "DPoP proof nonce"
 go run ./cmd/citebound corpus stats
 go run ./cmd/citebound serve   # HTTP API on 127.0.0.1:8080
 make eval                      # score search against the labeled questions
+
+# A real model's recorded answers, replayed with no API key
+go run ./cmd/citebound ask -model openrouter/nvidia/nemotron-3-ultra-550b-a55b:free \
+  -replay evals/recordings/nemotron-3-ultra.jsonl "Is the implicit grant still recommended?"
 ```
 
 ## Documentation
