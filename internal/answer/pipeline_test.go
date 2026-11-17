@@ -101,6 +101,26 @@ func TestPipelineEvents(t *testing.T) {
 	}
 }
 
+func TestPipelineEventsWithNoPassages(t *testing.T) {
+	for name, search := range map[string]fakeSearcher{
+		"no hits":     {},
+		"empty query": {err: index.ErrEmptyQuery},
+	} {
+		p := &Pipeline{Index: search, Answerer: fixedAnswer{}, Policy: DefaultPolicy}
+		var events []Event
+		res, err := p.Ask(context.Background(), "q", func(e Event) { events = append(events, e) })
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 || events[0].Passages == nil || len(events[0].Passages) != 0 {
+			t.Errorf("%s: events = %+v, want one empty, non-nil passages event", name, events)
+		}
+		if res.Reason != NoPassages {
+			t.Errorf("%s: reason %q", name, res.Reason)
+		}
+	}
+}
+
 func TestPipelineErrors(t *testing.T) {
 	boom := errors.New("boom")
 	hits := []index.Hit{{Ref: corpus.Ref{RFC: 1, Section: "1", Paragraph: 1}}}

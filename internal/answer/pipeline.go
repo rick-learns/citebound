@@ -59,7 +59,7 @@ type Result struct {
 }
 
 // Event reports progress while the pipeline runs, so callers can stream it.
-// Exactly one field is set.
+// Exactly one field is non-nil; Passages may be empty.
 type Event struct {
 	Passages []index.Hit    // retrieval finished
 	Claim    *verify.Claim  // a claim was parsed; its verdict follows
@@ -75,6 +75,9 @@ func (p *Pipeline) Ask(ctx context.Context, question string, emit func(Event)) (
 	hits, err := p.Index.Search(ctx, question, cmpOr(p.Passages, 8))
 	if err != nil && !errors.Is(err, index.ErrEmptyQuery) {
 		return nil, fmt.Errorf("search: %w", err)
+	}
+	if hits == nil {
+		hits = []index.Hit{} // so the passages event is recognizable when empty
 	}
 	res := &Result{Passages: hits}
 	emit(Event{Passages: hits})
