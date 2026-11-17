@@ -61,8 +61,11 @@ func (o *OpenAI) Complete(ctx context.Context, req Request) (*Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(out.Choices) == 0 || out.Choices[0].Message.Content == "" {
+	if len(out.Choices) == 0 {
 		return nil, ErrEmpty
+	}
+	if out.Choices[0].Message.Content == "" {
+		return nil, emptyReply(out.Choices[0].FinishReason == "length")
 	}
 	return &Response{
 		Text:         out.Choices[0].Message.Content,

@@ -68,7 +68,7 @@ func (a *Anthropic) Complete(ctx context.Context, req Request) (*Response, error
 		}
 	}
 	if text.Len() == 0 {
-		return nil, ErrEmpty
+		return nil, emptyReply(out.StopReason == "max_tokens")
 	}
 	return &Response{
 		Text:         text.String(),

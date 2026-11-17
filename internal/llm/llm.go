@@ -141,3 +141,12 @@ func redact(provider, secret string, err error) error {
 
 // ErrEmpty is returned when a provider replies with no text.
 var ErrEmpty = errors.New("the model returned no text")
+
+// emptyReply returns ErrEmpty, saying so if the reply stopped at the token
+// limit: reasoning models can spend the whole budget before writing.
+func emptyReply(truncated bool) error {
+	if truncated {
+		return fmt.Errorf("%w: it stopped at the token limit, so raise MaxTokens", ErrEmpty)
+	}
+	return ErrEmpty
+}
