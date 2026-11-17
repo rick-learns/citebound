@@ -44,6 +44,7 @@ commits:
 # The binary, with the web UI embedded (docs/decisions/0009-embed-the-web-ui.md).
 build: web/node_modules
 	cd web && npm run build
+	go vet -tags embedui ./...
 	go test -tags embedui ./web
 	go build -tags embedui -trimpath -ldflags "$(GO_LDFLAGS)" -o bin/citebound ./cmd/citebound
 

@@ -19,8 +19,8 @@ should not need Node.js to build the Go code.
   tag (`web/embed.go`). Without it (`web/noembed.go`), `web.Files()` returns
   nil.
 - `make build` builds the UI, then the binary with `-tags embedui`. It first
-  runs `go test -tags embedui ./web`, which checks that every asset
-  `index.html` references was embedded.
+  runs `go vet -tags embedui ./...` and `go test -tags embedui ./web`, which
+  checks that every asset `index.html` references was embedded.
 - `server.UI` serves the files at `/`. `/api/` keeps its own routes and
   errors, and every response keeps the server's security headers.
   - It serves only GET and HEAD, and never lists a directory.
@@ -37,8 +37,8 @@ should not need Node.js to build the Go code.
 
 - `go build ./...` and `go test ./...` keep working without Node.js. A binary
   built that way has no UI, and says so.
-- Two builds exist, so `embed.go` is only compiled and vetted when CI runs
-  `make build` and `go vet -tags embedui`, not by the default lint.
+- Two builds exist, so `embed.go` is only compiled and vetted by
+  `make build`, not by the default lint.
 - The UI and the API ship as one versioned binary, so they can't drift apart
   in a deployment.
 - `index.html` must be revalidated on every load, or a cached page could ask
