@@ -10,6 +10,23 @@ import (
 	"github.com/rick-learns/citebound/internal/verify"
 )
 
+// maxAnswerBytes caps what check reads. Answers are a few kilobytes; the cap
+// keeps a runaway pipe from using all memory.
+const maxAnswerBytes = 1 << 20
+
+// readAnswer reads all of r, failing rather than truncating past
+// maxAnswerBytes.
+func readAnswer(r io.Reader) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(r, maxAnswerBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > maxAnswerBytes {
+		return nil, fmt.Errorf("answer is larger than %d bytes", maxAnswerBytes)
+	}
+	return data, nil
+}
+
 // stdin is read by "check -". Tests replace it.
 var stdin io.Reader = os.Stdin
 
@@ -30,15 +47,18 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "citebound: %v\n", err)
 		return 1
 	}
-	var data []byte
-	var err error
-	if name := fs.Arg(0); name == "-" {
-		data, err = io.ReadAll(stdin)
-	} else {
-		data, err = os.ReadFile(name) //nolint:gosec // the operator names the file to check
+	in := stdin
+	if name := fs.Arg(0); name != "-" {
+		f, err := os.Open(name) //nolint:gosec // the operator names the file to check
+		if err != nil {
+			return fail(err)
+		}
+		defer f.Close()
+		in = f
 	}
+	data, err := readAnswer(in)
 	if err != nil {
-		return fail(err)
+		return fail(fmt.Errorf("%s: %w", fs.Arg(0), err))
 	}
 	rfcs, err := corpus.Load(*dir)
 	if err != nil {

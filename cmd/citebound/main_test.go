@@ -75,3 +75,15 @@ func TestCheckStdin(t *testing.T) {
 	}
 	stdin = os.Stdin
 }
+
+func TestCheckSizeLimit(t *testing.T) {
+	defer func() { stdin = os.Stdin }()
+	for size, tooLarge := range map[int]bool{maxAnswerBytes: false, maxAnswerBytes + 1: true} {
+		stdin = strings.NewReader(strings.Repeat("\n", size))
+		var out, errOut bytes.Buffer
+		code := run([]string{"check", "-dir", "../../corpus", "-"}, &out, &errOut)
+		if code != 1 || strings.Contains(errOut.String(), "larger than") != tooLarge {
+			t.Errorf("%d bytes: code %d, stderr %q", size, code, errOut.String())
+		}
+	}
+}
