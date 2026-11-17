@@ -45,6 +45,8 @@ Commit subjects and PR titles follow
 | `test` | Tests only | No |
 | `build` | Build system and dependencies | No |
 | `ci` | CI configuration | No |
+| `style` | Formatting only | No |
+| `revert` | Reverts an earlier commit | No |
 | `chore` | Anything else | No |
 
 Add `!` after the type for a breaking change. CI checks every commit subject
@@ -62,8 +64,8 @@ You need Go (version in `go.mod`), Node.js 24, and
 
 ```sh
 make web-install   # install web dependencies once
-make check         # every gate CI runs
-make build         # build bin/citebound with the web UI embedded
+make check         # every CI gate except the PR-title check, which only runs on PRs
+make build         # build the web bundle and bin/citebound
 ```
 
 ## Tests and evals

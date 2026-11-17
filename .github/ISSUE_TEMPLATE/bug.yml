@@ -20,8 +20,8 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. citebound serve
-        2. Ask "..."
+        1. Run `citebound ...`
+        2. ...
     validations:
       required: true
   - type: input
