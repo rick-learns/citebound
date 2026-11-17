@@ -15,6 +15,7 @@ Usage:
   citebound <command> [flags]
 
 Commands:
+  ask             Answer a question from the corpus: citebound ask <question>
   corpus verify   Check the pinned RFC files against their checksums
   corpus stats    Count the sections, paragraphs, and figures parsed from each RFC
   search          Search the corpus: citebound search <query>
@@ -33,6 +34,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	switch args[0] {
+	case "ask":
+		return runAsk(args[1:], stdout, stderr)
 	case "corpus":
 		return runCorpus(args[1:], stdout, stderr)
 	case "search":

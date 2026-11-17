@@ -24,6 +24,9 @@ func TestRun(t *testing.T) {
 		{name: "search", args: []string{"search", "-dir", "../../corpus", "-k", "1", "refresh", "token", "rotation"}, wantCode: 0, wantStdout: "1. RFC"},
 		{name: "search without query", args: []string{"search"}, wantCode: 2, wantStderr: "Usage: citebound search"},
 		{name: "search with only stopwords", args: []string{"search", "-dir", "../../corpus", "what is the"}, wantCode: 1, wantStderr: "no searchable words"},
+		{name: "ask", args: []string{"ask", "-dir", "../../corpus", "Can a refresh token be bound to a client?"}, wantCode: 0, wantStdout: "✓ "},
+		{name: "ask off topic", args: []string{"ask", "-dir", "../../corpus", "How do I bake sourdough bread?"}, wantCode: 0, wantStdout: "does not support an answer"},
+		{name: "ask without question", args: []string{"ask"}, wantCode: 2, wantStderr: "Usage: citebound ask"},
 		{name: "corpus without subcommand", args: []string{"corpus"}, wantCode: 2, wantStderr: "corpus verify"},
 	}
 	for _, tt := range tests {
