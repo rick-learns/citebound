@@ -7,6 +7,7 @@ const XSS = "<img src=x onerror=alert(1)>";
 
 afterEach(() => {
   document.body.replaceChildren();
+  vi.restoreAllMocks();
 });
 
 describe("createSourcePanel", () => {
@@ -123,5 +124,40 @@ describe("createSourcePanel", () => {
     await first;
     expect(panel.el.querySelector(".panel__title")?.textContent).toBe(SECTION.rfcTitle);
     expect(panel.el.querySelector(".para--cited")?.getAttribute("data-paragraph")).toBe("2");
+  });
+
+  it("follows the drawer breakpoint while open, in both directions", async () => {
+    let matches = true;
+    let onChange: () => void = () => undefined;
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query) =>
+        ({
+          get matches() {
+            return query.includes("max-width") && matches;
+          },
+          addEventListener: (_: string, fn: () => void) => {
+            if (query.includes("max-width")) onChange = fn;
+          },
+        }) as unknown as MediaQueryList,
+    );
+    const background = document.createElement("main");
+    const panel = createSourcePanel(() => Promise.resolve(SECTION), background);
+    document.body.append(background, panel.backdrop, panel.el);
+    const resize = (narrow: boolean) => {
+      matches = narrow;
+      onChange();
+    };
+
+    await panel.open({ ref: "RFC6749 §10.4 ¶1", quote: "" }, null);
+    expect([background.inert, panel.backdrop.hidden]).toEqual([true, false]);
+    resize(false);
+    expect([background.inert, panel.backdrop.hidden]).toEqual([false, true]);
+    resize(true);
+    expect([background.inert, panel.backdrop.hidden]).toEqual([true, false]);
+    panel.close();
+    expect([background.inert, panel.backdrop.hidden]).toEqual([false, true]);
+    resize(false);
+    resize(true); // closed: a resize changes nothing
+    expect([background.inert, panel.backdrop.hidden]).toEqual([false, true]);
   });
 });

@@ -75,6 +75,13 @@ export function createSourcePanel(load: SectionLoader, background?: HTMLElement)
     if (background) background.inert = on;
   }
 
+  // The panel is a drawer below this width. Follow the breakpoint while open, so resizing never
+  // leaves the page inert behind a side column, or interactive behind a drawer.
+  const narrow = window.matchMedia("(max-width: 959px)");
+  narrow.addEventListener("change", () => {
+    if (!el.hidden) setDrawerMode(narrow.matches);
+  });
+
   async function open(citation: Citation, from: HTMLElement | null): Promise<void> {
     const ref = parseRef(citation.ref);
     if (!ref) return;
@@ -84,7 +91,7 @@ export function createSourcePanel(load: SectionLoader, background?: HTMLElement)
     opener = from;
 
     el.hidden = false;
-    setDrawerMode(window.matchMedia("(max-width: 959px)").matches);
+    setDrawerMode(narrow.matches);
     setText(kicker, `RFC ${String(ref.rfc)}`);
     setText(title, citation.ref);
     setText(sub, "");
