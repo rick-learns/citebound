@@ -76,8 +76,8 @@ export function friendlyError(error: ErrorInfo): FriendlyError {
   switch (error.code) {
     case "rate_limited":
       return {
-        title: "Too many questions at once",
-        hint: "Please wait a few seconds and try again shortly.",
+        title: "Too many questions",
+        hint: "Each visitor can ask a few questions a minute. Wait as long as the message below says, then try again.",
       };
     case "budget_exhausted":
       return {

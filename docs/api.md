@@ -18,8 +18,10 @@ Errors outside a stream are JSON with a matching status:
 | --- | --- | --- |
 | `bad_request` | 400, 405, 415 | The request is malformed or not UTF-8, uses the wrong method (`Allow` lists the right ones), or its media type is not `application/json`. |
 | `not_found` | 404 | No such endpoint, RFC, or section. |
-| `rate_limited`, `budget_exhausted` | 429, 503 | Reserved for the public demo's guards. |
-| `unavailable`, `internal` | 503, 500 | The answer timed out or failed. |
+| `rate_limited` | 429 | The client asked too often. `Retry-After` gives the wait in seconds. See [decision 0010](decisions/0010-rate-limit-and-cap-asks.md). |
+| `unavailable` | 503 | Too many questions are being answered at once (`Retry-After: 5`), or, in a stream, the answer timed out. |
+| `internal` | 500 | The answer failed. |
+| `budget_exhausted` | 503 | Reserved for a daily cost limit. |
 | `not_recorded` | (stream only) | Replay mode has no recorded answer for the question. Only questions that retrieval finds passages for get this far; others are withheld with `no-passages`. |
 
 ## `GET /api/meta`
@@ -47,6 +49,12 @@ line breaks; prose is one line.
 
 Request: `Content-Type: application/json`, body `{"question": "..."}`, at
 most 1,000 characters. Unknown fields are rejected.
+
+Before streaming, a valid request can be refused with `429 rate_limited` or
+`503 unavailable` by the guards in
+[decision 0010](decisions/0010-rate-limit-and-cap-asks.md). `citebound serve`
+sets them with `-ask-rate`, `-ask-burst`, `-max-inflight`, and
+`-client-ip-header`.
 
 The response is `text/event-stream`. Each event is one `event:` line and one
 `data:` line of JSON. Events arrive in this order:

@@ -27,6 +27,11 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	dir := fs.String("dir", "corpus", "corpus directory containing manifest.json")
 	addr := fs.String("addr", "127.0.0.1:8080", "address to listen on")
+	// Guards for a public deployment (decision 0010); 0 disables each.
+	askRate := fs.Float64("ask-rate", 10, "questions a minute each client may ask")
+	askBurst := fs.Int("ask-burst", 5, "questions a client may ask at once before -ask-rate applies")
+	maxInFlight := fs.Int("max-inflight", 8, "questions answered at once, across all clients")
+	ipHeader := fs.String("client-ip-header", "", "header holding the client's address, set by a trusted reverse proxy (for example Fly-Client-IP)")
 	af := addAnswererFlags(fs)
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -61,7 +66,11 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		Pipeline: &answer.Pipeline{
 			Index: ix, Lookup: verify.NewCorpusLookup(rfcs), Answerer: a, Policy: answer.DefaultPolicy,
 		},
-		Logger: log,
+		Logger:         log,
+		AskRate:        *askRate,
+		AskBurst:       *askBurst,
+		MaxInFlight:    *maxInFlight,
+		ClientIPHeader: *ipHeader,
 	})
 	if err != nil {
 		return fail(err)

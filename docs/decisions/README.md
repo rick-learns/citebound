@@ -16,6 +16,7 @@ supersedes the old one.
 | [0007](0007-model-providers-and-replay.md) | Call models over plain HTTP, and replay recordings in CI | Accepted |
 | [0008](0008-escaped-double-quotes.md) | Read an escaped double quote in a quote as a double quote | Accepted |
 | [0009](0009-embed-the-web-ui.md) | Embed the built web UI behind a build tag | Accepted |
+| [0010](0010-rate-limit-and-cap-asks.md) | Rate-limit each client and cap concurrent asks | Accepted |
 
 ## Writing a record
 

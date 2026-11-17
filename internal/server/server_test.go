@@ -30,6 +30,12 @@ var (
 
 func newServer(t *testing.T, a answer.Answerer) *httptest.Server {
 	t.Helper()
+	return newServerWith(t, a, func(*Config) {})
+}
+
+// newServerWith is newServer with cfg adjusted by tweak.
+func newServerWith(t *testing.T, a answer.Answerer, tweak func(*Config)) *httptest.Server {
+	t.Helper()
 	pinnedOnce.Do(func() {
 		if pinnedRFCs, pinnedErr = corpus.Load("../../corpus"); pinnedErr != nil {
 			return
@@ -39,7 +45,7 @@ func newServer(t *testing.T, a answer.Answerer) *httptest.Server {
 	if pinnedErr != nil {
 		t.Fatal(pinnedErr)
 	}
-	s, err := New(Config{
+	cfg := Config{
 		Version: "v-test",
 		Mode:    "extractive",
 		RFCs:    pinnedRFCs,
@@ -47,7 +53,9 @@ func newServer(t *testing.T, a answer.Answerer) *httptest.Server {
 			Index: pinnedIx, Lookup: verify.NewCorpusLookup(pinnedRFCs), Answerer: a, Policy: answer.DefaultPolicy,
 		},
 		AskTimeout: 5 * time.Second,
-	})
+	}
+	tweak(&cfg)
+	s, err := New(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

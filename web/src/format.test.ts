@@ -60,7 +60,9 @@ describe("format helpers", () => {
   });
 
   it("has friendly messages for each error code", () => {
-    expect(friendlyError({ code: "rate_limited", message: "" }).hint).toMatch(/try again shortly/u);
+    expect(friendlyError({ code: "rate_limited", message: "" }).hint).toMatch(
+      /a few questions a minute/u,
+    );
     expect(friendlyError({ code: "budget_exhausted", message: "" }).title).toBe(
       "Live mode is paused",
     );

@@ -36,6 +36,21 @@ type Config struct {
 	// AskTimeout bounds one answer, end to end. Zero means 60 seconds.
 	AskTimeout time.Duration
 	Logger     *slog.Logger
+
+	// Guards for a public deployment (decision 0010). Zero disables each;
+	// New rejects negative, non-finite, and slower than daily rates.
+	//
+	// AskRate is how many asks a minute each client may start, in bursts of
+	// up to AskBurst (at least 1).
+	AskRate  float64
+	AskBurst int
+	// MaxInFlight caps the asks being answered at once, across all clients.
+	MaxInFlight int
+	// ClientIPHeader names a header holding the client's address, set by a
+	// trusted reverse proxy. Without one, the connection's address is used.
+	// Only set it behind a proxy that overwrites the header: otherwise
+	// clients choose their own rate-limit key.
+	ClientIPHeader string
 }
 
 // Server is the HTTP API.
@@ -45,12 +60,18 @@ type Server struct {
 	meta  []byte
 	mux   *http.ServeMux
 	clock func() time.Time
+	// Nil when their guard is disabled.
+	limits   *limiter
+	inflight chan struct{}
 }
 
 // New returns a server for cfg.
 func New(cfg Config) (*Server, error) {
 	if cfg.Pipeline == nil {
 		return nil, errors.New("server: no pipeline")
+	}
+	if err := cfg.validateGuards(); err != nil {
+		return nil, err
 	}
 	if cfg.AskTimeout == 0 {
 		cfg.AskTimeout = 60 * time.Second
@@ -59,6 +80,12 @@ func New(cfg Config) (*Server, error) {
 		cfg.Logger = slog.New(slog.DiscardHandler)
 	}
 	s := &Server{cfg: cfg, rfcs: map[int]*corpus.RFC{}, mux: http.NewServeMux(), clock: time.Now}
+	if cfg.AskRate > 0 {
+		s.limits = newLimiter(cfg.AskRate, max(1, cfg.AskBurst), func() time.Time { return s.clock() })
+	}
+	if cfg.MaxInFlight > 0 {
+		s.inflight = make(chan struct{}, cfg.MaxInFlight)
+	}
 	m := metaResponse{Version: cfg.Version, Mode: cfg.Mode, Model: cfg.Model, RFCs: []rfcMeta{}}
 	for _, r := range cfg.RFCs {
 		s.rfcs[r.Number] = r
@@ -189,6 +216,25 @@ func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
 	case utf8.RuneCountInString(q) > MaxQuestionRunes:
 		writeError(w, http.StatusBadRequest, "bad_request", "the question must be at most "+strconv.Itoa(MaxQuestionRunes)+" characters")
 		return
+	}
+	// Guards run after validation, so a malformed request costs no token.
+	if s.limits != nil {
+		if ok, wait := s.limits.allow(clientKey(r, s.cfg.ClientIPHeader)); !ok {
+			secs := retryAfter(wait)
+			w.Header().Set("Retry-After", strconv.Itoa(secs))
+			writeError(w, http.StatusTooManyRequests, "rate_limited", "too many questions; try again in "+strconv.Itoa(secs)+" s")
+			return
+		}
+	}
+	if s.inflight != nil {
+		select {
+		case s.inflight <- struct{}{}:
+			defer func() { <-s.inflight }()
+		default:
+			w.Header().Set("Retry-After", "5")
+			writeError(w, http.StatusServiceUnavailable, "unavailable", "the server is answering too many questions; try again shortly")
+			return
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), s.cfg.AskTimeout)
