@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/rick-learns/citebound/internal/answer"
 	"github.com/rick-learns/citebound/internal/index"
@@ -16,8 +17,11 @@ type eventStream struct {
 	rc *http.ResponseController
 }
 
-func newEventStream(w http.ResponseWriter) (*eventStream, error) {
+func newEventStream(w http.ResponseWriter, writeDeadline time.Time) (*eventStream, error) {
 	rc := http.NewResponseController(w)
+	if err := rc.SetWriteDeadline(writeDeadline); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		return nil, err
+	}
 	h := w.Header()
 	h.Set("Content-Type", "text/event-stream")
 	h.Set("Cache-Control", "no-store")

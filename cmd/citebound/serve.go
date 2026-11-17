@@ -68,7 +68,8 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		IdleTimeout:       60 * time.Second,
-		// No WriteTimeout: answers stream for as long as the ask timeout allows.
+		// The ask handler extends its own write deadline to cover a stream.
+		WriteTimeout: 30 * time.Second,
 	}
 	fmt.Fprintf(stdout, "Citebound %s listening on http://%s\n", version.Version, ln.Addr())
 	errc := make(chan error, 1)

@@ -264,6 +264,32 @@ func TestAskReportsFailures(t *testing.T) {
 	}
 }
 
+// slow answers after a delay.
+type slow time.Duration
+
+func (d slow) Answer(ctx context.Context, q string, p []index.Hit) (string, error) {
+	time.Sleep(time.Duration(d))
+	return answer.Extractive{}.Answer(ctx, q, p)
+}
+
+func TestAskOutlastsTheServerWriteTimeout(t *testing.T) {
+	newServer(t, answer.Extractive{}) // loads the corpus
+	s, err := New(Config{
+		Mode: "extractive", RFCs: pinnedRFCs, AskTimeout: 5 * time.Second,
+		Pipeline: &answer.Pipeline{Index: pinnedIx, Lookup: verify.NewCorpusLookup(pinnedRFCs), Answerer: slow(500 * time.Millisecond), Policy: answer.DefaultPolicy},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewUnstartedServer(s)
+	ts.Config.WriteTimeout = 200 * time.Millisecond
+	ts.Start()
+	t.Cleanup(ts.Close)
+	if _, events := ask(t, ts, `{"question":"refresh token rotation"}`); !strings.HasSuffix(names(events), ",done") {
+		t.Errorf("events = %s, want the stream to finish", names(events))
+	}
+}
+
 func TestAskRejectsBadRequests(t *testing.T) {
 	ts := newServer(t, answer.Extractive{})
 	for name, body := range map[string]string{

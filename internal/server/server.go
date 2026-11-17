@@ -183,7 +183,9 @@ func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), s.cfg.AskTimeout)
 	defer cancel()
-	stream, err := newEventStream(w)
+	// The server's WriteTimeout suits JSON endpoints, not a stream that may
+	// run for the whole ask timeout. Allow that, plus time to send the error.
+	stream, err := newEventStream(w, s.clock().Add(s.cfg.AskTimeout+5*time.Second))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal", "streaming is not supported")
 		return
