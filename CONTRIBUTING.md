@@ -59,8 +59,9 @@ A good summary says why the change matters, not only what it touches:
 
 ## Local setup
 
-You need Go (version in `go.mod`), Node.js 24, and
-[golangci-lint](https://golangci-lint.run/) v2.
+You need Go (version in `go.mod`), Node.js 24,
+[golangci-lint](https://golangci-lint.run/) v2, and Docker or Podman for the
+container check.
 
 ```sh
 make web-install   # install web dependencies once

@@ -64,6 +64,14 @@ the question box. Another question ends in an error when search finds passages
 for it, because there is no recorded answer to replay. A question that matches
 no passages is withheld as usual, since no answer is requested.
 
+To run the web UI with no Go or Node.js, use the container image. It
+answers extractively by default; [the container docs](docs/container.md)
+show replay and live models.
+
+```sh
+podman build -t citebound . && podman run --rm -p 8080:8080 citebound   # or docker
+```
+
 > [!NOTE]
 > Work in progress toward v0.1.0. See the
 > [milestones](https://github.com/rick-learns/citebound/milestones).
@@ -123,6 +131,7 @@ go run ./cmd/citebound ask -model openrouter/nvidia/nemotron-3-ultra-550b-a55b:f
 
 - [Answer format](docs/answer-format.md)
 - [HTTP API](docs/api.md)
+- [Container](docs/container.md)
 - [Scorecard](docs/scorecard.md) and [evals](evals/README.md)
 - [Limitations](docs/limitations.md)
 - [Decision records](docs/decisions/README.md)
