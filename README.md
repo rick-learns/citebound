@@ -45,8 +45,25 @@ The first answer is a real model's, recorded once and replayed, so it runs
 offline. The second is hand-written: no model in the recordings has yet
 invented a quote, so the demo shows the check on a made-up one.
 
+![A recorded answer about DPoP in the web UI: four claims verified and one struck, with the cited paragraph of RFC 9449 open beside them and the quote highlighted.](docs/images/web-ui.png)
+
+The web UI streams each claim as it is checked. Click a verified citation to
+open the RFC paragraph with the quote highlighted. The struck claim above is a
+false strike: the model quoted a figure correctly but escaped it as JSON (see
+[the limitations](docs/limitations.md#a-real-quote-can-be-struck-because-the-model-escaped-it)).
+To run this page with no API key:
+
+```sh
+make build
+bin/citebound serve -model openrouter/nvidia/nemotron-3-ultra-550b-a55b:free \
+  -replay evals/recordings/nemotron-3-ultra.jsonl   # http://127.0.0.1:8080
+```
+
+Replay mode answers only the recorded questions, such as the examples under
+the question box. Any other question ends in an error.
+
 > [!NOTE]
-> Work in progress. The web UI and the full eval scorecard are next. See the
+> Work in progress. The full eval scorecard is next. See the
 > [milestones](https://github.com/rick-learns/citebound/milestones).
 
 ## How it works
