@@ -1,0 +1,19 @@
+# Build output
+/bin/
+/dist/
+/web/dist/
+/web/node_modules/
+
+# Local data and secrets
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.env
+.env.*
+!.env.example
+
+# Tooling
+coverage.out
+/tmp/
+.DS_Store
