@@ -1,0 +1,433 @@
+/* Citebound: a calm, typeset-document look. One accent; status is never colour alone. */
+
+:root {
+  color-scheme: light dark;
+  --paper: #fbfaf7;
+  --surface: #ffffff;
+  --ink: #1c1b19;
+  --ink-soft: #3d3b37;
+  --muted: #6b6760;
+  --rule: #e2ded6;
+  --rule-strong: #cfcac0;
+  --accent: #1f56a3;
+  --accent-ink: #ffffff;
+  --accent-soft: #e9eff9;
+  --mark: #d9e5f7;
+
+  --font-prose:
+    "Iowan Old Style", "Charter", "Bitstream Charter", "Source Serif Pro", Georgia,
+    "Times New Roman", serif;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --radius: 6px;
+  --gutter: clamp(16px, 4vw, 40px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #131416;
+    --surface: #1a1c1f;
+    --ink: #e8e6e1;
+    --ink-soft: #cfccc5;
+    --muted: #9c988f;
+    --rule: #2b2e33;
+    --rule-strong: #3a3e44;
+    --accent: #8fb6f2;
+    --accent-ink: #0f1a2b;
+    --accent-soft: #1b2638;
+    --mark: #2a3d5c;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  padding: 8px 12px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: var(--radius);
+  z-index: 50;
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+/* ---------- Masthead ---------- */
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 28px var(--gutter) 20px;
+  border-bottom: 1px solid var(--rule);
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.masthead__name {
+  margin: 0;
+  font-family: var(--font-prose);
+  font-size: clamp(1.75rem, 1.4rem + 1.4vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.masthead__tagline {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 1.05rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  background: var(--surface);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.badge__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--muted);
+  flex: none;
+}
+.badge[data-mode="extractive"] .badge__dot,
+.badge[data-mode="model"] .badge__dot,
+.badge[data-mode="replay"] .badge__dot {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+/* ---------- Layout ---------- */
+
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px var(--gutter) 48px;
+}
+
+.main {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  min-width: 0;
+}
+
+@media (min-width: 960px) {
+  .layout:has(.panel:not([hidden])) {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 460px);
+  }
+}
+
+/* ---------- Ask form ---------- */
+
+.ask__label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.ask__box {
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: border-color 120ms;
+}
+.ask__box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.ask textarea {
+  display: block;
+  width: 100%;
+  min-height: 3.6em;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-prose);
+  font-size: 1.1rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+/* Browsers default to a grey that fails AA contrast on the dark surface; --muted passes in both. */
+.ask textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+.ask textarea:focus-visible {
+  outline: none; /* the box draws the ring */
+}
+.ask textarea:disabled {
+  color: var(--muted);
+}
+
+.ask__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 10px;
+}
+
+.ask__hint {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.ask__buttons {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.button {
+  min-height: 40px;
+  padding: 8px 18px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.button--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+.examples__label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-right: 2px;
+}
+.example {
+  padding: 6px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+.example:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.example:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Answer ---------- */
+
+.answer {
+  margin-top: 36px;
+}
+
+.intro {
+  padding: 20px 22px;
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+}
+.intro__title {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 500;
+}
+.intro__steps {
+  margin: 0;
+  padding-left: 1.3em;
+  font-family: var(--font-prose);
+  font-size: 1.02rem;
+}
+.intro__steps li + li {
+  margin-top: 4px;
+}
+
+.answer__question {
+  margin: 0 0 20px;
+  padding-left: 14px;
+  border-left: 3px solid var(--rule-strong);
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.answer__progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.answer__progress::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border: 2px solid var(--rule-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+/* ---------- Footer ---------- */
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 24px;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 16px var(--gutter) 28px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.footer p {
+  margin: 0;
+}
+.footer__rfc {
+  text-decoration: none;
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes slide-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  /* Spinners stop; a dotted ring still reads as "in progress", alongside the status text. */
+  .claim--pending .claim__icon::before,
+  .answer__progress::before {
+    border-style: dotted;
+  }
+}
