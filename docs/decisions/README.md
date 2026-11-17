@@ -18,6 +18,7 @@ supersedes the old one.
 | [0009](0009-embed-the-web-ui.md) | Embed the built web UI behind a build tag | Accepted |
 | [0010](0010-rate-limit-and-cap-asks.md) | Rate-limit each client and cap concurrent asks | Accepted |
 | [0011](0011-daily-token-budget.md) | Fall back to extractive answers when a daily token budget is used up | Accepted |
+| [0012](0012-distroless-container-image.md) | Ship a distroless container image with the corpus and recordings | Accepted |
 
 ## Writing a record
 

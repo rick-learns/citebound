@@ -1,12 +1,12 @@
 # Every target CI runs is reachable from `make check`.
 GO_LDFLAGS := -X github.com/rick-learns/citebound/internal/version.Version=$(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
-.PHONY: check go-check web-check eval scorecard commits build web-install clean demo test
+.PHONY: check go-check web-check eval scorecard commits build container web-install clean demo test
 
 # Commit subjects are checked against this ref.
 BASE ?= origin/main
 
-check: go-check web-check eval demo build commits
+check: go-check web-check eval demo build container commits
 
 go-check:
 	go mod tidy -diff
@@ -54,6 +54,10 @@ build: web/node_modules
 	go vet -tags embedui ./...
 	go test -tags embedui ./web
 	go build -tags embedui -trimpath -ldflags "$(GO_LDFLAGS)" -o bin/citebound ./cmd/citebound
+
+# Build the container image and smoke-test it (docker or podman).
+container:
+	scripts/container-smoke.sh
 
 clean:
 	rm -rf bin web/dist

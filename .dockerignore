@@ -1,0 +1,13 @@
+# Only what the Dockerfile copies.
+*
+!go.mod
+!go.sum
+!cmd/
+!internal/
+!web/
+web/node_modules/
+web/dist/
+!corpus/
+!evals/recordings/
+**/*_test.go
+**/testdata/
