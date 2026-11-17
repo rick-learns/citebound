@@ -1,39 +1,64 @@
-// Package server serves the Citebound HTTP API: corpus metadata and sections
-// for the citation panel.
+// Package server serves the Citebound HTTP API: corpus metadata, sections for
+// the citation panel, and answers streamed as server-sent events.
 package server
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"log/slog"
+	"mime"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
+	"unicode/utf8"
 
+	"github.com/rick-learns/citebound/internal/answer"
 	"github.com/rick-learns/citebound/internal/corpus"
+)
+
+// Limits on a question.
+const (
+	MaxQuestionRunes = 1000
+	maxBodyBytes     = 16 << 10
 )
 
 // Config is what the server needs.
 type Config struct {
-	Version string
-	Mode    string // "extractive" or "model"
-	Model   string // the model name, if Mode is "model"
-	RFCs    []*corpus.RFC
-	Logger  *slog.Logger
+	Version  string
+	Mode     string // "extractive" or "model"
+	Model    string // the model name, if Mode is "model"
+	RFCs     []*corpus.RFC
+	Pipeline *answer.Pipeline
+	// AskTimeout bounds one answer, end to end. Zero means 60 seconds.
+	AskTimeout time.Duration
+	Logger     *slog.Logger
 }
 
 // Server is the HTTP API.
 type Server struct {
-	cfg  Config
-	rfcs map[int]*corpus.RFC
-	meta []byte
-	mux  *http.ServeMux
+	cfg   Config
+	rfcs  map[int]*corpus.RFC
+	meta  []byte
+	mux   *http.ServeMux
+	clock func() time.Time
 }
 
 // New returns a server for cfg.
 func New(cfg Config) (*Server, error) {
+	if cfg.Pipeline == nil {
+		return nil, errors.New("server: no pipeline")
+	}
+	if cfg.AskTimeout == 0 {
+		cfg.AskTimeout = 60 * time.Second
+	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.New(slog.DiscardHandler)
 	}
-	s := &Server{cfg: cfg, rfcs: map[int]*corpus.RFC{}, mux: http.NewServeMux()}
+	s := &Server{cfg: cfg, rfcs: map[int]*corpus.RFC{}, mux: http.NewServeMux(), clock: time.Now}
 	m := metaResponse{Version: cfg.Version, Mode: cfg.Mode, Model: cfg.Model, RFCs: []rfcMeta{}}
 	for _, r := range cfg.RFCs {
 		s.rfcs[r.Number] = r
@@ -49,6 +74,7 @@ func New(cfg Config) (*Server, error) {
 	}{
 		{http.MethodGet, "/api/meta", s.handleMeta},
 		{http.MethodGet, "/api/section", s.handleSection},
+		{http.MethodPost, "/api/ask", s.handleAsk},
 	} {
 		s.mux.HandleFunc(route.method+" "+route.path, route.h)
 		// Without this, the /api/ catch-all below would answer 404.
@@ -131,19 +157,47 @@ func (s *Server) handleSection(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
-type errorBody struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+type askRequest struct {
+	Question string `json:"question"`
 }
 
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
-}
+func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
+	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
+		writeError(w, http.StatusUnsupportedMediaType, "bad_request", "send the question as application/json")
+		return
+	}
+	// Read the raw body first: encoding/json replaces invalid UTF-8 with
+	// U+FFFD, so it must be rejected before decoding.
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBodyBytes))
+	if err != nil || !utf8.Valid(raw) {
+		writeError(w, http.StatusBadRequest, "bad_request", `send {"question": "..."} as UTF-8 JSON of at most 16 KiB`)
+		return
+	}
+	var req askRequest
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil || dec.Decode(&struct{}{}) != io.EOF {
+		writeError(w, http.StatusBadRequest, "bad_request", `send {"question": "..."}`)
+		return
+	}
+	q := strings.TrimSpace(req.Question)
+	switch {
+	case q == "":
+		writeError(w, http.StatusBadRequest, "bad_request", "the question is empty")
+		return
+	case utf8.RuneCountInString(q) > MaxQuestionRunes:
+		writeError(w, http.StatusBadRequest, "bad_request", "the question must be at most "+strconv.Itoa(MaxQuestionRunes)+" characters")
+		return
+	}
 
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	writeJSON(w, status, struct {
-		Error errorBody `json:"error"`
-	}{errorBody{Code: code, Message: message}})
+	ctx, cancel := context.WithTimeout(r.Context(), s.cfg.AskTimeout)
+	defer cancel()
+	// The server's WriteTimeout suits JSON endpoints, not a stream that may
+	// run for the whole ask timeout. Allow that, plus time to send the error.
+	stream, err := newEventStream(w, s.clock().Add(s.cfg.AskTimeout+5*time.Second))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", "streaming is not supported")
+		return
+	}
+	s.answer(ctx, stream, q)
 }

@@ -13,8 +13,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rick-learns/citebound/internal/answer"
 	"github.com/rick-learns/citebound/internal/corpus"
+	"github.com/rick-learns/citebound/internal/index"
 	"github.com/rick-learns/citebound/internal/server"
+	"github.com/rick-learns/citebound/internal/verify"
 	"github.com/rick-learns/citebound/internal/version"
 )
 
@@ -38,11 +41,19 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
+	ix, err := index.Build(ctx, rfcs)
+	if err != nil {
+		return fail(err)
+	}
+	defer ix.Close()
 	api, err := server.New(server.Config{
 		Version: version.Version,
 		Mode:    "extractive",
 		RFCs:    rfcs,
-		Logger:  log,
+		Pipeline: &answer.Pipeline{
+			Index: ix, Lookup: verify.NewCorpusLookup(rfcs), Answerer: answer.Extractive{}, Policy: answer.DefaultPolicy,
+		},
+		Logger: log,
 	})
 	if err != nil {
 		return fail(err)
@@ -57,7 +68,8 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		IdleTimeout:       60 * time.Second,
-		WriteTimeout:      30 * time.Second,
+		// The ask handler extends its own write deadline to cover a stream.
+		WriteTimeout: 30 * time.Second,
 	}
 	fmt.Fprintf(stdout, "Citebound %s listening on http://%s\n", version.Version, ln.Addr())
 	errc := make(chan error, 1)
