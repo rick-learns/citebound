@@ -380,9 +380,11 @@ body {
   margin: 0;
   padding: 0;
 }
-/* An abstention withholds the answer; its claims stay visible, but not as the answer. */
+/* An abstention withholds the answer; its claims stay visible, but not as the answer.
+   A rule sets them apart rather than fading them, so their text keeps AA contrast. */
 .claims--withheld {
-  opacity: 0.7;
+  border-left: 2px dashed var(--rule-strong);
+  padding-left: 14px;
 }
 
 .claim {
@@ -639,6 +641,8 @@ body {
 }
 
 .panel__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 8px 20px 20px;
   overscroll-behavior: contain;
@@ -726,6 +730,11 @@ mark {
     inset: 0 0 0 auto;
     top: 0;
     width: min(100%, 520px);
+    /* Fill the viewport so the head stays put and .panel__scroll scrolls; without a height the
+       drawer grows with its content, past the bottom of the screen. */
+    align-self: stretch;
+    height: 100vh;
+    height: 100dvh;
     max-height: none;
     border-radius: 0;
     border-width: 0 0 0 1px;
@@ -739,6 +748,10 @@ mark {
     inset: 0;
     z-index: 10;
     background: rgb(0 0 0 / 0.35);
+  }
+  /* The backdrop is shown exactly while the panel is a drawer, so the page behind stays still. */
+  html:has(.panel-backdrop:not([hidden])) {
+    overflow: hidden;
   }
 }
 
