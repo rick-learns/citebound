@@ -61,6 +61,35 @@ describe("findQuote, like the verifier", () => {
       'validate that the "aud" claim contains',
     );
   });
+
+  it('maps typographic quotes before reading \\" as "', () => {
+    expect(marked(AUD, String.raw`MUST validate that the \“aud\” claim contains`)).toBe(
+      'MUST validate that the "aud" claim contains',
+    );
+  });
+
+  it("splits on Go's whitespace, not JavaScript's", () => {
+    const text = "MUST maintain the binding between a refresh token";
+    expect(findQuote(text, "MUST maintain\u0085the binding")).not.toBeNull();
+    expect(findQuote("MUST maintain\u0085the binding", "MUST maintain the binding")).not.toBeNull();
+    // U+FEFF is whitespace to JavaScript but not to Go.
+    expect(findQuote("MUST maintain\ufeffthe binding", "MUST maintain the binding")).toBeNull();
+  });
+
+  it("keeps a space that dropping trailing punctuation exposes", () => {
+    const text = "MUST preserve quoted spacesX; MUST preserve quoted spaces next.";
+    expect(findQuote(text, "MUST preserve quoted spaces ,")?.start).toBe(
+      text.lastIndexOf("MUST preserve"),
+    );
+  });
+
+  it("ends a match on whitespace at the end of its run", () => {
+    const text = "MUST preserve quoted spaces \n   next";
+    expect(findQuote(text, "MUST preserve quoted spaces ,")).toEqual({
+      start: 0,
+      end: text.indexOf("next"),
+    });
+  });
 });
 
 describe("highlightQuote", () => {

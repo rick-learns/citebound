@@ -15,45 +15,65 @@ const TYPOGRAPHIC: Record<string, string> = {
   "\u2011": "-",
 };
 
+// Go's unicode.IsSpace, which strings.Fields uses. JavaScript's \s differs: it lacks U+0085
+// and adds U+FEFF.
+const GO_SPACE = /[\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/u;
+
 /**
- * Finds quote inside text the way the verifier compares them: every run of whitespace (including
- * the line breaks in figures) counts as one space, typographic quotes and dashes as ASCII, and
- * trailing .,;: in the quote is ignored. The quote is tried as written, then with each \" read
- * as " (decision 0008). Returns offsets into the original text, or null.
+ * Finds quote inside text the way internal/verify does: both are normalized (typographic quotes
+ * and dashes as ASCII, each run of whitespace as one space, ends trimmed, trailing .,;: dropped),
+ * and the normalized quote is tried as written, then with each \" read as " (decision 0008).
+ * Returns offsets into the original text, or null.
  */
 export function findQuote(text: string, quote: string): Span | null {
-  const unescaped = quote.replaceAll('\\"', '"');
-  return locate(text, quote) ?? (unescaped === quote ? null : locate(text, unescaped));
+  const needle = collapse(quote)
+    .chars.join("")
+    .replace(/[.,;:]+$/u, "");
+  if (needle === "") return null;
+  const unescaped = needle.replaceAll('\\"', '"');
+  return locate(text, needle) ?? (unescaped === needle ? null : locate(text, unescaped));
 }
 
-function locate(text: string, quote: string): Span | null {
-  const needle = quote
-    .replace(/[‘’“”–—‑]/gu, (ch) => TYPOGRAPHIC[ch] ?? ch)
-    .trim()
-    .replace(/\s+/gu, " ")
-    .replace(/[.,;:]+$/u, "")
-    .trimEnd();
-  if (needle === "") return null;
-
-  // Collapsed copy of text, plus the original index of each collapsed character.
-  let hay = "";
-  const origin: number[] = [];
-  let prevSpace = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text.charAt(i);
-    const space = /\s/u.test(ch);
-    if (space && prevSpace) continue;
-    prevSpace = space;
-    hay += space ? " " : (TYPOGRAPHIC[ch] ?? ch);
-    origin.push(i);
+/**
+ * Normalizes s like Go's strings.Fields after the typographic map, keeping for each output
+ * character the original range it stands for: a space covers its whole run of whitespace.
+ */
+function collapse(s: string): { chars: string[]; from: number[]; to: number[] } {
+  const chars: string[] = [];
+  const from: number[] = [];
+  const to: number[] = [];
+  for (let i = 0; i < s.length;) {
+    if (GO_SPACE.test(s.charAt(i))) {
+      const runStart = i;
+      while (i < s.length && GO_SPACE.test(s.charAt(i))) i++;
+      // Fields drops leading and trailing whitespace.
+      if (chars.length > 0 && i < s.length) {
+        chars.push(" ");
+        from.push(runStart);
+        to.push(i);
+      }
+      continue;
+    }
+    const ch = s.charAt(i);
+    chars.push(TYPOGRAPHIC[ch] ?? ch);
+    from.push(i);
+    to.push(i + 1);
+    i++;
   }
+  return { chars, from, to };
+}
 
-  const at = hay.indexOf(needle);
+function locate(text: string, needle: string): Span | null {
+  const { chars, from, to } = collapse(text);
+  const at = chars
+    .join("")
+    .replace(/[.,;:]+$/u, "")
+    .indexOf(needle);
   if (at < 0) return null;
-  const start = origin[at];
-  const last = origin[at + needle.length - 1];
-  if (start === undefined || last === undefined) return null;
-  return { start, end: last + 1 };
+  const start = from[at];
+  const end = to[at + needle.length - 1];
+  if (start === undefined || end === undefined) return null;
+  return { start, end };
 }
 
 /**
