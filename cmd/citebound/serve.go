@@ -26,6 +26,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	dir := fs.String("dir", "corpus", "corpus directory containing manifest.json")
 	addr := fs.String("addr", "127.0.0.1:8080", "address to listen on")
+	af := addAnswererFlags(fs)
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -33,6 +34,11 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	fail := func(err error) int {
 		log.Error("serve", "err", err)
 		return 1
+	}
+
+	a, err := af.build()
+	if err != nil {
+		return fail(err)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -48,10 +54,11 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	defer ix.Close()
 	api, err := server.New(server.Config{
 		Version: version.Version,
-		Mode:    "extractive",
+		Mode:    a.mode,
+		Model:   a.model,
 		RFCs:    rfcs,
 		Pipeline: &answer.Pipeline{
-			Index: ix, Lookup: verify.NewCorpusLookup(rfcs), Answerer: answer.Extractive{}, Policy: answer.DefaultPolicy,
+			Index: ix, Lookup: verify.NewCorpusLookup(rfcs), Answerer: a, Policy: answer.DefaultPolicy,
 		},
 		Logger: log,
 	})

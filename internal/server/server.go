@@ -29,8 +29,8 @@ const (
 // Config is what the server needs.
 type Config struct {
 	Version  string
-	Mode     string // "extractive" or "model"
-	Model    string // the model name, if Mode is "model"
+	Mode     string // "extractive", "model" (live), or "replay" (recorded answers)
+	Model    string // the model name, unless Mode is "extractive"
 	RFCs     []*corpus.RFC
 	Pipeline *answer.Pipeline
 	// AskTimeout bounds one answer, end to end. Zero means 60 seconds.

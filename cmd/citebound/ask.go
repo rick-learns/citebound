@@ -17,17 +17,22 @@ func runAsk(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("ask", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	dir := fs.String("dir", "corpus", "corpus directory containing manifest.json")
+	af := addAnswererFlags(fs)
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	question := strings.Join(fs.Args(), " ")
 	if strings.TrimSpace(question) == "" {
-		fmt.Fprintln(stderr, "Usage: citebound ask [-dir corpus] <question>")
+		fmt.Fprintln(stderr, "Usage: citebound ask [-dir corpus] [-model provider/model [-record | -replay file]] <question>")
 		return 2
 	}
 	fail := func(err error) int {
 		fmt.Fprintf(stderr, "citebound: %v\n", err)
 		return 1
+	}
+	a, err := af.build()
+	if err != nil {
+		return fail(err)
 	}
 	ctx := context.Background()
 	rfcs, err := corpus.Load(*dir)
@@ -42,7 +47,7 @@ func runAsk(args []string, stdout, stderr io.Writer) int {
 	p := &answer.Pipeline{
 		Index:    ix,
 		Lookup:   verify.NewCorpusLookup(rfcs),
-		Answerer: answer.Extractive{},
+		Answerer: a,
 		Policy:   answer.DefaultPolicy,
 	}
 	res, err := p.Ask(ctx, question, nil)
