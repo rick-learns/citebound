@@ -46,8 +46,8 @@ key.
   was withheld. These are correct claims rejected, not fabrications.
 - **Hidden reasoning can use up the budget.** Nemotron reasons before it
   writes. At a 1,024-token limit, most answerable questions came back empty,
-  so the limit is now 4,096. Recording retries a reply that comes back empty
-  at the limit.
+  so the limit is now 4,096. `-record` does not retry: an empty reply is an
+  error and is not recorded, so ask the question again.
 
 ## Re-recording
 
