@@ -1,13 +1,16 @@
 # Limitations
 
 Where Citebound's guarantee stops, with a real or hand-written example of
-each. Each example is pinned by a CLI test (`TestRun` in
-`cmd/citebound/main_test.go`), so if the behavior changes, the test fails and
-this page has to change with it.
+each. Each example is pinned by a CLI test in `cmd/citebound/main_test.go`: `TestRun`
+for the `check` output, and `TestLimitationReplays` for the full replayed
+answers. If the behavior changes, a test fails and this page has to change
+with it.
 
 The guarantee is narrow: every quote shown as verified appears, after
 [normalization](decisions/0005-exact-quote-verification.md), in the paragraph
-it cites. Everything below is outside it.
+it cites, either as written or with each `\"` read as `"`
+([decision 0008](decisions/0008-escaped-double-quotes.md)). Everything below
+is outside it.
 
 ## A real quote can sit beside a false claim
 
@@ -41,13 +44,21 @@ and line break becomes the literal text `\\\n`.
 $ citebound check examples/escaped-figure.txt
 ✗ The client includes the dpop_jkt parameter in the authorization request with the JWK Thumbprint of its DPoP public key.
   struck: quote-not-found
+
+0 of 1 claims verified.
 ```
 
 This is a false strike, and the claim is true. The verifier undoes only one
 escape, `\"` ([decision 0008](decisions/0008-escaped-double-quotes.md)),
 because undoing more, such as `\\` or `\n`, would also change RFC text that
 really contains backslashes. The other four claims in that answer verified,
-so the answer was shown with this one struck.
+so the answer was shown with this one struck. Replay it:
+
+```sh
+citebound ask -model openrouter/nvidia/nemotron-3-ultra-550b-a55b:free \
+  -replay evals/recordings/nemotron-3-ultra.jsonl \
+  "How can I bind the authorization code itself to my DPoP key?"
+```
 
 ## A reply cut off at the token limit ends in a struck line
 
@@ -62,10 +73,14 @@ $ citebound check examples/cut-off.txt
 
 ✗ Applications should protect against such attacks, for example by matching the URL to
   struck: uncited
+
+1 of 2 claims verified.
 ```
 
 The struck line is shown, so the cut is visible, and the verified claim is
-still correct. But nothing tells the user that the answer is incomplete.
+still correct. Replayed through `citebound ask`, the answer is shown, because
+half its claims verified ([decision 0006](decisions/0006-abstention-policy.md)).
+But nothing tells the user that it is incomplete.
 Hidden reasoning tokens count against the same budget. Two of 180 recorded
 replies were cut off this way.
 
@@ -79,6 +94,8 @@ but its quote says "soon" and "reduce" where RFC 6749 says "shortly" and
 $ citebound check examples/paraphrase.txt
 ✗ Authorization codes must expire soon after they are issued.
   struck: quote-not-found
+
+0 of 1 claims verified.
 ```
 
 The verifier wants the RFC's own words, apart from whitespace and typographic

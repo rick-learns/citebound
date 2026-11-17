@@ -1,0 +1,15 @@
+✓ The dpop_jkt authorization request parameter binds the authorization code to the client's DPoP public key by conveying its JWK Thumbprint.
+  RFC9449 §10 ¶1
+
+✗ The client includes the dpop_jkt parameter in the authorization request with the JWK Thumbprint of its DPoP public key.
+  struck: quote-not-found
+
+✓ At the token endpoint, the authorization server verifies that the JWK Thumbprint of the DPoP proof's public key matches the dpop_jkt value and must reject the request if they differ.
+  RFC9449 §10 ¶2
+
+✓ This binding prevents an attacker from using a captured authorization code with a different DPoP key.
+  RFC9449 §11.9 ¶1
+
+✓ The dpop_jkt parameter is optional and can be combined with PKCE for additional security.
+  RFC9449 §10 ¶6
+

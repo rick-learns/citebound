@@ -92,3 +92,24 @@ func TestCheckSizeLimit(t *testing.T) {
 		}
 	}
 }
+
+// TestLimitationReplays pins the two real model answers in docs/limitations.md
+// in full: each is shown, not withheld, with its struck line and no notice
+// that it is incomplete. If one changes, update the page.
+func TestLimitationReplays(t *testing.T) {
+	const model = "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+	for golden, question := range map[string]string{
+		"testdata/limitation-r071.golden": "How can I bind the authorization code itself to my DPoP key?",
+		"testdata/limitation-r049.golden": "Is it safe to fetch whatever URL appears in a JWT's jku or x5u header to get the verification key?",
+	} {
+		want, err := os.ReadFile(golden)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var stdout, stderr bytes.Buffer
+		code := run([]string{"ask", "-dir", "../../corpus", "-model", model, "-replay", "../../evals/recordings/nemotron-3-ultra.jsonl", question}, &stdout, &stderr)
+		if code != 0 || stdout.String() != string(want) {
+			t.Errorf("%s: code %d, stderr %q\nstdout:\n%s", golden, code, stderr.String(), stdout.String())
+		}
+	}
+}
