@@ -9,6 +9,7 @@ supersedes the old one.
 | --- | --- | --- |
 | [0001](0001-record-decisions.md) | Record decisions in `docs/decisions` | Accepted |
 | [0002](0002-go-backend-typescript-ui.md) | Go backend, TypeScript UI, one SQLite file | Accepted |
+| [0003](0003-review-and-merge-gate.md) | Small PRs, independent review, and a squash-merge gate | Accepted |
 
 ## Writing a record
 
