@@ -49,6 +49,8 @@ func TestVerify(t *testing.T) {
 		{"escaped double quotes", Claim{Ref: audRef, Citation: "x", Quote: `MUST validate that the \"aud\" claim contains`}, ReasonNone},
 		{"escaped quotes do not excuse other changes", Claim{Ref: audRef, Citation: "x", Quote: `MUST validate that the \"iss\" claim contains`}, ReasonQuoteNotFound},
 		{"a literal backslash in the RFC", Claim{Ref: literalRef, Citation: "x", Quote: `title="Login to \"apps\""`}, ReasonNone},
+		{"backslashes do not count toward the size", Claim{Ref: audRef, Citation: "x", Quote: `at the \"aud\" claim`}, ReasonQuoteTooShort}, // 20 runes as written, 18 unescaped
+		{"just long enough once unescaped", Claim{Ref: audRef, Citation: "x", Quote: `that the \"aud\" claim`}, ReasonNone},                 // 20 runes unescaped
 		{"other escapes are not read", Claim{Ref: audRef, Citation: "x", Quote: `MUST validate that the \'aud\' claim`}, ReasonQuoteNotFound},
 		{"figure quote across lines", Claim{Ref: corpus.Ref{RFC: 6749, Section: "4.1", Paragraph: 1}, Citation: "x", Quote: "+----------+ | Resource | | Owner |"}, ReasonNone},
 	}

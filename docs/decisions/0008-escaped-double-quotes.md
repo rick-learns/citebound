@@ -28,7 +28,8 @@ When the quote as written is not in the cited paragraph, the verifier tries
 again with each `\"` read as `"`. A claim verifies if either form is a
 substring of the normalized paragraph.
 
-Only `\"` is read this way. Other backslash sequences are compared as written.
+The minimum size applies to the form that matched, so backslashes cannot
+make a short quote long enough. Only `\"` is read this way. Other backslash sequences are compared as written.
 The quote is tried as written first because a few RFC examples contain a
 literal `\"`, such as `title="Login to \"apps\""` in RFC 9110.
 

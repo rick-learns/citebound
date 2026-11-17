@@ -78,14 +78,26 @@ func Verify(l Lookup, c Claim) Result {
 		return struck(ReasonUnknownRef)
 	}
 	quote := Normalize(c.Quote)
-	if utf8.RuneCountInString(quote) < MinQuoteRunes || len(strings.Fields(quote)) < MinQuoteWords {
+	if !bigEnough(quote) {
 		return struck(ReasonQuoteTooShort)
 	}
 	text = Normalize(text)
-	if !strings.Contains(text, quote) && !strings.Contains(text, unescapeQuotes(quote)) {
-		return struck(ReasonQuoteNotFound)
+	if !strings.Contains(text, quote) {
+		// The size rule applies to the form that matched: backslashes are
+		// not evidence.
+		unescaped := unescapeQuotes(quote)
+		if unescaped == quote || !strings.Contains(text, unescaped) {
+			return struck(ReasonQuoteNotFound)
+		}
+		if !bigEnough(unescaped) {
+			return struck(ReasonQuoteTooShort)
+		}
 	}
 	return Result{Claim: c, Status: Verified}
+}
+
+func bigEnough(quote string) bool {
+	return utf8.RuneCountInString(quote) >= MinQuoteRunes && len(strings.Fields(quote)) >= MinQuoteWords
 }
 
 // unescapeQuotes reads \" as ". Models escape double quotes inside a quote,
