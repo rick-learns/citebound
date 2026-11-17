@@ -43,6 +43,9 @@ export function mountApp(root: HTMLElement): void {
       if (controller === ctrl) dispatch(action);
     };
     dispatch({ type: "start", question });
+    // Close the previous answer's source, and cancel it if it is still loading. Its chip is gone
+    // by now, so focus stays where the form put it.
+    panel.close();
     try {
       // askStream returns after done or error, and rejects with "incomplete" if the stream ends
       // before either, so the reducer always sees how it stopped.

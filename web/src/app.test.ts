@@ -167,4 +167,41 @@ describe("mountApp", () => {
     expect(vi.mocked(fetchSection).mock.calls[0]?.slice(0, 2)).toEqual([6749, "10.4"]);
     expect(text(".para--cited mark")).toBe("binding");
   });
+
+  it.each([
+    ["loaded", true],
+    ["still loading", false],
+  ])("closes the previous answer's source (%s) when a new question starts", async (_, loaded) => {
+    const section: Section = {
+      rfc: 6749,
+      rfcTitle: "The OAuth 2.0 Authorization Framework",
+      section: "10.4",
+      sectionTitle: "Refresh Tokens",
+      paragraphs: [
+        { ref: "RFC6749 §10.4 ¶2", paragraph: 2, text: "MUST maintain the binding", figure: false },
+      ],
+    };
+    let resolveSection: (s: Section) => void = () => undefined;
+    vi.mocked(fetchSection).mockImplementation(
+      () => new Promise((resolve) => (resolveSection = resolve)),
+    );
+    vi.mocked(askStream).mockImplementation(() => stream([CLAIM, VERIFIED, DONE]));
+    mountApp(root);
+    askExample();
+    await settle();
+    $(".claim .chip--link")?.click();
+    if (loaded) resolveSection(section);
+    await settle();
+
+    askExample();
+    expect($(".panel")?.hidden).toBe(true);
+    // A pending load is cancelled. (A finished one has nothing left to cancel.)
+    const signal = vi.mocked(fetchSection).mock.calls[0]?.[2];
+    expect(loaded || signal?.aborted).toBe(true);
+    resolveSection(section);
+    await settle();
+    expect($(".panel")?.hidden).toBe(true);
+    // A cancelled load never renders. A loaded section stays in the hidden panel until the next.
+    expect(root.querySelectorAll(".para")).toHaveLength(loaded ? 1 : 0);
+  });
 });
