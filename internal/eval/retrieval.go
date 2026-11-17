@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"slices"
 
@@ -52,6 +51,9 @@ func parseRetrievalCases(data []byte) ([]RetrievalCase, error) {
 		var c RetrievalCase
 		if err := dec.Decode(&c); err != nil {
 			return nil, fmt.Errorf("line %d: %w", line, err)
+		}
+		if dec.Decode(&struct{}{}) != io.EOF {
+			return nil, fmt.Errorf("line %d: more than one JSON value", line)
 		}
 		if err := c.validate(); err != nil {
 			return nil, fmt.Errorf("line %d: %w", line, err)
@@ -168,11 +170,13 @@ func RunRetrieval(ctx context.Context, s Searcher, cases []RetrievalCase) (*Retr
 			sectionHits5++
 		}
 	}
+	// Scores are kept unrounded, so Check compares exactly; only the summary
+	// rounds them.
 	n := float64(len(cases))
-	rep.Recall5 = round(rep.Recall5 / n)
-	rep.MRR = round(rep.MRR / n)
-	rep.HitRate5 = round(float64(hits5) / n)
-	rep.SectionHitRate5 = round(float64(sectionHits5) / n)
+	rep.Recall5 /= n
+	rep.MRR /= n
+	rep.HitRate5 = float64(hits5) / n
+	rep.SectionHitRate5 = float64(sectionHits5) / n
 	return rep, nil
 }
 
@@ -209,9 +213,6 @@ func sectionKey(r corpus.Ref) string {
 	return fmt.Sprintf("RFC%d §%s", r.RFC, r.Section)
 }
 
-// round keeps reports stable and readable: four decimal places.
-func round(x float64) float64 { return math.Round(x*1e4) / 1e4 }
-
 // Thresholds are the minimum scores a run must reach. They live in
 // evals/thresholds.json so that lowering one shows up in review.
 type Thresholds struct {
@@ -233,6 +234,9 @@ func LoadThresholds(path string) (Thresholds, error) {
 	if err := dec.Decode(&f); err != nil {
 		return Thresholds{}, fmt.Errorf("%s: %w", path, err)
 	}
+	if dec.Decode(&struct{}{}) != io.EOF {
+		return Thresholds{}, fmt.Errorf("%s: more than one JSON value", path)
+	}
 	if f.Retrieval == nil {
 		return Thresholds{}, fmt.Errorf("%s: no retrieval thresholds", path)
 	}
@@ -243,10 +247,10 @@ func LoadThresholds(path string) (Thresholds, error) {
 func (r *RetrievalReport) Check(t Thresholds) error {
 	var errs []error
 	if r.Recall5 < t.Recall5 {
-		errs = append(errs, fmt.Errorf("recall@5 %.4f is below the threshold %.4f", r.Recall5, t.Recall5))
+		errs = append(errs, fmt.Errorf("recall@5 %.6f is below the threshold %.6f", r.Recall5, t.Recall5))
 	}
 	if r.MRR < t.MRR {
-		errs = append(errs, fmt.Errorf("MRR@10 %.4f is below the threshold %.4f", r.MRR, t.MRR))
+		errs = append(errs, fmt.Errorf("MRR@10 %.6f is below the threshold %.6f", r.MRR, t.MRR))
 	}
 	return errors.Join(errs...)
 }

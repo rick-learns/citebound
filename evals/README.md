@@ -39,8 +39,10 @@ go run ./cmd/citebound eval retrieval -out report.json   # with per-question res
 | section hit@5 | Like hit rate@5, but any paragraph of a gold section counts |
 
 [`thresholds.json`](thresholds.json) holds the gate: the scores of the current
-search, rounded down. A change that lowers either score fails CI. A change
-that raises them should raise the thresholds in the same pull request.
+search, floored to six decimals and compared unrounded. The smallest change
+one question can make is about 0.0001, so any regression fails CI. A test
+also fails if the scores rise above the thresholds, so a change that improves
+search raises them in the same pull request.
 
 ### Baseline
 

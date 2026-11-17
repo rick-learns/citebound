@@ -3,6 +3,9 @@ package eval
 import (
 	"bytes"
 	"context"
+	"math"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -31,6 +34,8 @@ func TestParseRetrievalCases(t *testing.T) {
 		"no gold":       `{"id":"r1","question":"q","gold":[]}`,
 		"bad ref":       `{"id":"r1","question":"q","gold":["RFC6749 10.4"]}`,
 		"duplicate id":  `{"id":"r1","question":"q","gold":["RFC6749 §1 ¶1"]}` + "\n" + `{"id":"r1","question":"q","gold":["RFC6749 §1 ¶1"]}`,
+		"two on a line": `{"id":"r1","question":"q","gold":["RFC6749 §1 ¶1"]}{"id":"r2","question":"q","gold":["RFC6749 §1 ¶1"]}`,
+		"trailing junk": `{"id":"r1","question":"q","gold":["RFC6749 §1 ¶1"]} x`,
 	}
 	for name, in := range bad {
 		if _, err := parseRetrievalCases([]byte(in)); err == nil {
@@ -89,7 +94,7 @@ func TestRunRetrieval(t *testing.T) {
 		t.Errorf("Recall5 = %v, want 0.3", rep.Recall5)
 	}
 	// MRR: 1 + 1/2 + 1/7 over 5 cases.
-	if rep.MRR != round((1+0.5+1.0/7)/5) {
+	if want := (1 + 0.5 + 1.0/7) / 5; math.Abs(rep.MRR-want) > 1e-12 {
 		t.Errorf("MRR = %v", rep.MRR)
 	}
 	if rep.HitRate5 != 0.4 || rep.SectionHitRate5 != 0.8 {
@@ -110,6 +115,12 @@ func TestRunRetrieval(t *testing.T) {
 	err = rep.Check(Thresholds{Recall5: 0.31, MRR: 0.9})
 	if err == nil || !strings.Contains(err.Error(), "recall@5") || !strings.Contains(err.Error(), "MRR@10") {
 		t.Errorf("Check above the scores = %v, want both metrics named", err)
+	}
+
+	// Scores are compared unrounded: 1/6 is below 0.1667.
+	sixth := RetrievalReport{Recall5: 1, MRR: 1.0 / 6}
+	if err := sixth.Check(Thresholds{MRR: 0.1667}); err == nil {
+		t.Error("MRR 1/6 passed a threshold of 0.1667")
 	}
 
 	var buf bytes.Buffer
@@ -137,5 +148,56 @@ func TestCheckGold(t *testing.T) {
 	msg := err.Error()
 	if strings.Contains(msg, "ok:") || !strings.Contains(msg, "§10.4 ¶99") || !strings.Contains(msg, "RFC9999") || !strings.Contains(msg, "§12.1 ¶1 is in a reference list") {
 		t.Errorf("CheckGold = %v", err)
+	}
+}
+
+func TestLoadThresholds(t *testing.T) {
+	dir := t.TempDir()
+	for name, body := range map[string]string{
+		"two values":    `{"retrieval":{"recall_at_5":0.5,"mrr_at_10":0.4}} {"retrieval":{}}`,
+		"unknown field": `{"retrieval":{"recall_at_5":0.5,"mrr":0.4}}`,
+		"no retrieval":  `{}`,
+	} {
+		path := filepath.Join(dir, "t.json")
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := LoadThresholds(path); err == nil {
+			t.Errorf("%s: no error", name)
+		}
+	}
+}
+
+// The committed thresholds are the current scores floored to 6 decimals, so
+// any regression fails. The smallest change one question can make is to MRR,
+// 1/9 - 1/10 over 100 questions, about 0.0001. A change that improves search
+// must raise the thresholds too.
+func TestThresholdsAreTheBaseline(t *testing.T) {
+	rfcs, err := corpus.Load("../../corpus")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases, err := LoadRetrievalCases("../../evals/retrieval.jsonl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := LoadThresholds("../../evals/thresholds.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ix, err := index.Build(context.Background(), rfcs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ix.Close()
+	rep, err := RunRetrieval(context.Background(), ix, cases)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, pair := range map[string][2]float64{"recall@5": {rep.Recall5, want.Recall5}, "MRR@10": {rep.MRR, want.MRR}} {
+		got, floor := pair[0], pair[1]
+		if got < floor || got-floor >= 1e-6 {
+			t.Errorf("%s is %.8f but the threshold is %.6f; set it to the score floored to 6 decimals", name, got, floor)
+		}
 	}
 }
