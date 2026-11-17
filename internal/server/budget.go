@@ -10,6 +10,7 @@ import (
 	"github.com/rick-learns/citebound/internal/answer"
 	"github.com/rick-learns/citebound/internal/index"
 	"github.com/rick-learns/citebound/internal/llm"
+	"golang.org/x/text/unicode/norm"
 )
 
 // modelAnswerer is an answerer that can say what it will send a model, so a
@@ -25,11 +26,17 @@ type modelAnswerer interface {
 const framingTokens = 100
 
 // reservation is an upper bound on the tokens req can use (decision 0011).
-// No byte-level tokenizer makes a token of less than one byte, so the
-// prompt's length in bytes bounds its tokens, and the reply, hidden reasoning
-// included, stops at MaxTokens.
+// The reply, hidden reasoning included, stops at MaxTokens.
 func reservation(req llm.Request) int {
-	return len(req.System) + len(req.User) + req.MaxTokens + framingTokens
+	return promptBound(req.System) + promptBound(req.User) + req.MaxTokens + framingTokens
+}
+
+// promptBound is an upper bound on the tokens in s. A tokenizer normalizes
+// the text, if at all, with NFC or NFKC, then splits it into tokens of at
+// least one byte each. Normalizing can lengthen text: under NFC, U+0FB9's 3
+// bytes become 6. So the bound is the longest of the three forms.
+func promptBound(s string) int {
+	return max(len(s), len(norm.NFC.String(s)), len(norm.NFKC.String(s)))
 }
 
 // budget counts the model tokens answers use each UTC day, so the server can

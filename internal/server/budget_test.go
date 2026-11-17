@@ -118,6 +118,33 @@ func TestBudgetChargesFailedCallsAnUpperBound(t *testing.T) {
 	}
 }
 
+// Normalization can make a prompt longer than its bytes: under NFC, U+0FB9
+// (3 bytes) becomes U+0F90 U+0FB5 (6). A question of 995 of them must be
+// bounded by its normalized length.
+func TestPromptBoundCoversNormalization(t *testing.T) {
+	for _, c := range []struct {
+		s    string
+		want int
+	}{
+		{"plain ASCII", 11},
+		{"\u0fb9", 6},       // NFC decomposes it
+		{"\ufdfa", 33},      // NFKC: 18 Arabic letters and spaces
+		{"\ufb01", 3},       // NFKC shortens the ligature to "fi"; the raw bytes are longer
+		{"e\u0301", 3},      // NFC composes to é (2 bytes); the raw form is longer
+		{"\u0fb9\ufb01", 9}, // NFC 9 bytes, NFKC 8, raw 6
+	} {
+		if got := promptBound(c.s); got != c.want {
+			t.Errorf("promptBound(%+q) = %d, want %d", c.s, got, c.want)
+		}
+	}
+	question := "PRNG " + strings.Repeat("\u0fb9", 995)
+	hits := []index.Hit{{Ref: corpus.Ref{RFC: 1, Section: "1", Paragraph: 1}, Text: "A pseudo-random number generator."}}
+	req := answer.Model{}.Request(question, hits)
+	if got, min := reservation(req), len(req.System)+len(req.User)+995*3+req.MaxTokens; got < min {
+		t.Errorf("reservation = %d, want at least %d: the raw bytes plus 3 for each expanded character", got, min)
+	}
+}
+
 func TestBudgetNeedsAModelAnswerer(t *testing.T) {
 	for _, c := range []struct {
 		mode string

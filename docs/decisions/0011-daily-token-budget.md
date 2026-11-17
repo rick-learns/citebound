@@ -30,10 +30,17 @@ has no effect in extractive mode.
   now, is dropped: no request is refused for budget.
 - **Reserve, then settle.** Each model call is charged an upper bound on its
   tokens when it starts: the prompt's length in bytes, plus the reply cap
-  (4,096 tokens, hidden reasoning included), plus 100 for framing. No
-  byte-level tokenizer makes a token of less than one byte, so a prompt
-  never has more tokens than bytes. When the call returns usable counts,
-  the charge is replaced by them. Otherwise the reservation stays:
+  (4,096 tokens, hidden reasoning included), plus 100 for framing.
+  - Tokenizers normalize text with NFC, NFKC, or not at all, then split it
+    into tokens of at least one byte. Normalizing can lengthen text: under
+    NFC, U+0FB9's 3 bytes become 6. So the prompt's length is the longest of
+    its raw, NFC, and NFKC forms, using `golang.org/x/text/unicode/norm`.
+  - This holds for byte-level BPE tokenizers (the OpenAI, Anthropic, Llama,
+    and Qwen families) and SentencePiece with byte fallback. A model whose
+    tokenizer normalizes some other way would need its own bound.
+
+  When the call returns usable counts, the charge is replaced by them.
+  Otherwise the reservation stays:
   - the call failed, whatever the reason;
   - the reply had no counts, or a negative one.
 
@@ -69,8 +76,9 @@ has no effect in extractive mode.
 - **A fixed reservation.** The first version reserved 10,000 tokens, above
   every recorded answer. But a long question can retrieve large figures:
   one valid question sends about 9,500 input tokens, so a run of billed
-  failures would each be undercharged. Sizing the bound from the request
-  holds for any question.
+  failures would each be undercharged. A second version counted raw bytes,
+  which a question of characters that normalization expands still beat.
+  Sizing the bound from the normalized request holds for any question.
 - **Count only reported tokens.** Calls that fail or lose their counts would
   be free, so the breaker could be bypassed by exactly the replies most
   likely to be billed without use.
