@@ -37,7 +37,7 @@ flowchart TD
 | [`internal/server`](../internal/server) | The HTTP API: answers stream as server-sent events, behind per-client rate limits, an in-flight cap, and a daily token budget ([decisions 0010](decisions/0010-rate-limit-and-cap-asks.md) and [0011](decisions/0011-daily-token-budget.md)). See [the API](api.md) |
 | [`internal/eval`](../internal/eval) | Scores retrieval, quotation validity, claim support, and refusal, and writes [the scorecard](scorecard.md) |
 | [`web`](../web) | The TypeScript UI, with no framework, embedded in the binary when built with the `embedui` tag ([decision 0009](decisions/0009-embed-the-web-ui.md)) |
-| [`cmd/citebound`](../cmd/citebound) | The CLI: `ask`, `check`, `search`, `serve`, `eval`, and `corpus` |
+| [`cmd/citebound`](../cmd/citebound) | The CLI: `ask`, `check`, `search`, `serve`, `eval`, `corpus`, `version`, and `help` |
 
 ## One question, step by step
 
@@ -60,7 +60,10 @@ flowchart TD
 
 The server streams each step as it happens: a `retrieval` event, then a
 `claim` and a `verdict` for each claim, an `abstain` event if the answer was
-withheld, and a final `done` event with counts, latency, and token use.
+withheld, and a final `done` event with counts, latency, and token use. If
+answering fails, for example when replay has no recording for the question,
+an `error` event ends the stream instead, with no `done`. See
+[the API](api.md).
 
 ## What runs offline
 
