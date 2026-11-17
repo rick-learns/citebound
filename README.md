@@ -60,7 +60,9 @@ bin/citebound serve -model openrouter/nvidia/nemotron-3-ultra-550b-a55b:free \
 ```
 
 Replay mode answers only the recorded questions, such as the examples under
-the question box. Any other question ends in an error.
+the question box. Another question ends in an error when search finds passages
+for it, because there is no recorded answer to replay. A question that matches
+no passages is withheld as usual, since no answer is requested.
 
 > [!NOTE]
 > Work in progress. The full eval scorecard is next. See the
