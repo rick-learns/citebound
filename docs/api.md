@@ -20,6 +20,7 @@ Errors outside a stream are JSON with a matching status:
 | `not_found` | 404 | No such endpoint, RFC, or section. |
 | `rate_limited`, `budget_exhausted` | 429, 503 | Reserved for the public demo's guards. |
 | `unavailable`, `internal` | 503, 500 | The answer timed out or failed. |
+| `not_recorded` | (stream only) | Replay mode has no recorded answer for the question. Only questions that retrieval finds passages for get this far; others are withheld with `no-passages`. |
 
 ## `GET /api/meta`
 

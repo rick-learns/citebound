@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,7 @@ import (
 	"github.com/rick-learns/citebound/internal/answer"
 	"github.com/rick-learns/citebound/internal/corpus"
 	"github.com/rick-learns/citebound/internal/index"
+	"github.com/rick-learns/citebound/internal/llm"
 	"github.com/rick-learns/citebound/internal/verify"
 )
 
@@ -250,8 +252,9 @@ func (f failing) Answer(context.Context, string, []index.Hit) (string, error) { 
 
 func TestAskReportsFailures(t *testing.T) {
 	for err, code := range map[error]string{
-		errors.New("boom"):       "internal",
-		context.DeadlineExceeded: "unavailable",
+		errors.New("boom"):                           "internal",
+		context.DeadlineExceeded:                     "unavailable",
+		fmt.Errorf("replay: %w", llm.ErrNotRecorded): "not_recorded",
 	} {
 		ts := newServer(t, failing{err})
 		_, events := ask(t, ts, `{"question":"refresh tokens"}`)
