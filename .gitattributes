@@ -1,0 +1,2 @@
+# RFC text is pinned by checksum; never convert line endings.
+corpus/rfc/*.txt -text

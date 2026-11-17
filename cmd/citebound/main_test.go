@@ -18,6 +18,9 @@ func TestRun(t *testing.T) {
 		{name: "version", args: []string{"version"}, wantCode: 0, wantStdout: "dev"},
 		{name: "help", args: []string{"help"}, wantCode: 0, wantStdout: "Commands:"},
 		{name: "unknown", args: []string{"nope"}, wantCode: 2, wantStderr: `unknown command "nope"`},
+		{name: "corpus verify", args: []string{"corpus", "verify", "-dir", "../../corpus"}, wantCode: 0, wantStdout: "21 RFCs verified"},
+		{name: "corpus verify missing dir", args: []string{"corpus", "verify", "-dir", "does-not-exist"}, wantCode: 1, wantStderr: "read manifest"},
+		{name: "corpus without subcommand", args: []string{"corpus"}, wantCode: 2, wantStderr: "corpus verify"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

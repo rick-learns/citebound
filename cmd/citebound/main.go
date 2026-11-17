@@ -15,8 +15,9 @@ Usage:
   citebound <command> [flags]
 
 Commands:
-  version   Print the build version
-  help      Show this help
+  corpus verify   Check the pinned RFC files against their checksums
+  version         Print the build version
+  help            Show this help
 `
 
 func main() {
@@ -30,6 +31,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	switch args[0] {
+	case "corpus":
+		return runCorpus(args[1:], stdout, stderr)
 	case "version", "--version":
 		fmt.Fprintln(stdout, version.Version)
 		return 0
