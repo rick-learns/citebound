@@ -39,11 +39,13 @@ key.
   three RFCs.
 - **Refusal.** The model abstained on the off-topic question, the false
   premise, and all nine fake-citation prompts.
-- **Real quotes struck on format.** For "What claims must a JWT access token
+- **Escaped double quotes.** For "What claims must a JWT access token
   contain?", all three quotes are real RFC 9068 text that contains double
   quotes (`"aud"`). The model escaped them as `\"aud\"`, even though the
-  prompt says not to, so they were struck as `quote-not-found`, and the answer
-  was withheld. These are correct claims rejected, not fabrications.
+  prompt says not to. Before
+  [decision 0008](../../docs/decisions/0008-escaped-double-quotes.md), they were
+  struck as `quote-not-found` and a correct answer was withheld. Now they
+  verify.
 - **Hidden reasoning can use up the budget.** Nemotron reasons before it
   writes. At a 1,024-token limit, most answerable questions came back empty,
   so the limit is now 4,096. `-record` does not retry: an empty reply is an

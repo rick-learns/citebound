@@ -18,7 +18,14 @@ var refreshRef = corpus.Ref{RFC: 6749, Section: "1.5", Paragraph: 2}
 var lookup = fakeLookup{
 	refreshRef: "authorization information. Unlike access tokens, refresh tokens are intended for use only with authorization servers and are never sent to resource servers.",
 	{RFC: 6749, Section: "4.1", Paragraph: 1}: "+----------+\n| Resource |\n|  Owner   |\n+----------+",
+	audRef:     `The resource server MUST validate that the "aud" claim contains a resource indicator value`,
+	literalRef: `WWW-Authenticate: Basic realm="simple", title="Login to \"apps\""`,
 }
+
+var (
+	audRef     = corpus.Ref{RFC: 9068, Section: "4", Paragraph: 8}
+	literalRef = corpus.Ref{RFC: 9110, Section: "11.6.1", Paragraph: 6}
+)
 
 func TestVerify(t *testing.T) {
 	tests := []struct {
@@ -38,6 +45,13 @@ func TestVerify(t *testing.T) {
 		{"unknown paragraph", Claim{Ref: corpus.Ref{RFC: 6749, Section: "1.5", Paragraph: 99}, Citation: "x", Quote: "refresh tokens are intended for use only"}, ReasonUnknownRef},
 		{"unparseable citation", Claim{Citation: "RFC 6749 section 1.5", Quote: "refresh tokens are intended for use only"}, ReasonBadCitation},
 		{"no citation", Claim{Text: "Refresh tokens are great."}, ReasonUncited},
+		{"double quotes as written", Claim{Ref: audRef, Citation: "x", Quote: `MUST validate that the "aud" claim contains`}, ReasonNone},
+		{"escaped double quotes", Claim{Ref: audRef, Citation: "x", Quote: `MUST validate that the \"aud\" claim contains`}, ReasonNone},
+		{"escaped quotes do not excuse other changes", Claim{Ref: audRef, Citation: "x", Quote: `MUST validate that the \"iss\" claim contains`}, ReasonQuoteNotFound},
+		{"a literal backslash in the RFC", Claim{Ref: literalRef, Citation: "x", Quote: `title="Login to \"apps\""`}, ReasonNone},
+		{"backslashes do not count toward the size", Claim{Ref: audRef, Citation: "x", Quote: `at the \"aud\" claim`}, ReasonQuoteTooShort}, // 20 runes as written, 18 unescaped
+		{"just long enough once unescaped", Claim{Ref: audRef, Citation: "x", Quote: `that the \"aud\" claim`}, ReasonNone},                 // 20 runes unescaped
+		{"other escapes are not read", Claim{Ref: audRef, Citation: "x", Quote: `MUST validate that the \'aud\' claim`}, ReasonQuoteNotFound},
 		{"figure quote across lines", Claim{Ref: corpus.Ref{RFC: 6749, Section: "4.1", Paragraph: 1}, Citation: "x", Quote: "+----------+ | Resource | | Owner |"}, ReasonNone},
 	}
 	for _, tt := range tests {
@@ -77,10 +91,11 @@ func TestVerifyAgainstPinnedCorpus(t *testing.T) {
 	l := NewCorpusLookup(rfcs)
 	answer := `PKCE derives the challenge from the verifier with SHA-256. [RFC7636 §4.2 ¶3: "code_challenge = BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))"]
 Refresh tokens never go to resource servers. [RFC6749 §1.5 ¶2: "refresh tokens are intended for use only with authorization servers and are never sent to resource servers"]
-Refresh tokens must always be rotated. [RFC6749 §10.4 ¶1: "refresh tokens MUST always be rotated on every use"]`
+Refresh tokens must always be rotated. [RFC6749 §10.4 ¶1: "refresh tokens MUST always be rotated on every use"]
+The token must contain an "exp" claim. [RFC9068 §4 ¶10: "The current time MUST be before the time represented by the \"exp\" claim."]`
 	claims, _ := ParseAnswer(answer)
 	got := VerifyAll(l, claims)
-	want := []Status{Verified, Verified, Struck}
+	want := []Status{Verified, Verified, Struck, Verified}
 	if len(got) != len(want) {
 		t.Fatalf("got %d results, want %d", len(got), len(want))
 	}

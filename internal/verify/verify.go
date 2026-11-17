@@ -78,13 +78,34 @@ func Verify(l Lookup, c Claim) Result {
 		return struck(ReasonUnknownRef)
 	}
 	quote := Normalize(c.Quote)
-	if utf8.RuneCountInString(quote) < MinQuoteRunes || len(strings.Fields(quote)) < MinQuoteWords {
+	if !bigEnough(quote) {
 		return struck(ReasonQuoteTooShort)
 	}
-	if !strings.Contains(Normalize(text), quote) {
-		return struck(ReasonQuoteNotFound)
+	text = Normalize(text)
+	if !strings.Contains(text, quote) {
+		// The size rule applies to the form that matched: backslashes are
+		// not evidence.
+		unescaped := unescapeQuotes(quote)
+		if unescaped == quote || !strings.Contains(text, unescaped) {
+			return struck(ReasonQuoteNotFound)
+		}
+		if !bigEnough(unescaped) {
+			return struck(ReasonQuoteTooShort)
+		}
 	}
 	return Result{Claim: c, Status: Verified}
+}
+
+func bigEnough(quote string) bool {
+	return utf8.RuneCountInString(quote) >= MinQuoteRunes && len(strings.Fields(quote)) >= MinQuoteWords
+}
+
+// unescapeQuotes reads \" as ". Models escape double quotes inside a quote,
+// as in "the \"aud\" claim", even when told not to. Verify tries the quote as
+// written first, because a few RFC examples contain a literal \"; either way
+// the quote must be in the cited paragraph. See decision 0008.
+func unescapeQuotes(s string) string {
+	return strings.ReplaceAll(s, `\"`, `"`)
 }
 
 // VerifyAll checks every claim, in order.
