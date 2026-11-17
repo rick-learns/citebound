@@ -40,6 +40,8 @@ func (c Config) validateGuards() error {
 		return fmt.Errorf("server: ask burst %d: want 0 to %d", c.AskBurst, maxAskBurst)
 	case c.MaxInFlight < 0:
 		return errors.New("server: max in flight must not be negative, or 0 to disable")
+	case c.DailyTokens < 0:
+		return errors.New("server: daily tokens must not be negative, or 0 to disable")
 	}
 	return nil
 }

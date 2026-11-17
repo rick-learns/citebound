@@ -53,6 +53,7 @@ describe("createAnswerView", () => {
           inputTokens: 0,
           outputTokens: 0,
           costUsd: 0,
+          budgetExhausted: false,
         },
       },
     });
@@ -107,7 +108,6 @@ describe("createAnswerView", () => {
   it.each([
     ["rate_limited", "Too many questions"],
     ["not_recorded", "No recorded answer"],
-    ["budget_exhausted", "Live mode is paused"],
     ["bad_request", "That question couldn't be processed"],
     ["unavailable", "The assistant is temporarily unavailable"],
     ["not_found", "Not found"],
@@ -145,6 +145,7 @@ describe("createAnswerView", () => {
     inputTokens: 0,
     outputTokens: 0,
     costUsd: 0,
+    budgetExhausted: false,
   };
 
   it.each([

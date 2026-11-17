@@ -27,6 +27,7 @@ const DONE: AskEvent = {
     inputTokens: 0,
     outputTokens: 0,
     costUsd: 0,
+    budgetExhausted: false,
   },
 };
 

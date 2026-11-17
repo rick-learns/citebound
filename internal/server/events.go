@@ -89,6 +89,9 @@ type doneEvent struct {
 	InputTokens  int     `json:"inputTokens"`
 	OutputTokens int     `json:"outputTokens"`
 	CostUSD      float64 `json:"costUsd"`
+	// BudgetExhausted is set when the day's model tokens were used up, so
+	// the extractive answerer answered instead (decision 0011).
+	BudgetExhausted bool `json:"budgetExhausted"`
 }
 
 // abstainMessages explain each abstention to a reader.
@@ -124,7 +127,15 @@ func (s *Server) answer(ctx context.Context, stream *eventStream, question strin
 			nextID++
 		}
 	}
-	res, err := s.cfg.Pipeline.Ask(ctx, question, emit)
+	p, mode, model := s.cfg.Pipeline, s.cfg.Mode, s.cfg.Model
+	overBudget := false
+	if s.budget != nil {
+		p = s.charged
+		if overBudget = s.budget.exhausted(); overBudget {
+			p, mode, model = s.fallback, "extractive", ""
+		}
+	}
+	res, err := p.Ask(ctx, question, emit)
 	if sendErr != nil {
 		return // the client went away
 	}
@@ -153,14 +164,15 @@ func (s *Server) answer(ctx context.Context, stream *eventStream, question strin
 		}
 	}
 	_ = stream.send("done", doneEvent{
-		Mode:         s.cfg.Mode,
-		Model:        s.cfg.Model,
-		Claims:       len(res.Claims),
-		Verified:     res.Verified,
-		Struck:       len(res.Claims) - res.Verified,
-		LatencyMs:    s.clock().Sub(start).Milliseconds(),
-		InputTokens:  res.InputTokens,
-		OutputTokens: res.OutputTokens,
+		Mode:            mode,
+		Model:           model,
+		BudgetExhausted: overBudget,
+		Claims:          len(res.Claims),
+		Verified:        res.Verified,
+		Struck:          len(res.Claims) - res.Verified,
+		LatencyMs:       s.clock().Sub(start).Milliseconds(),
+		InputTokens:     res.InputTokens,
+		OutputTokens:    res.OutputTokens,
 	})
 }
 
