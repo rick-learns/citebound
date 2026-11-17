@@ -33,16 +33,26 @@ malformed request costs nothing:
     (for example `Fly-Client-IP`). It must hold one address; anything else
     shares a single bucket. The header is ignored unless named, because a
     client could otherwise choose its own key.
-  - At most 10,000 clients are tracked. Past that, buckets that have refilled
-    are dropped, since they equal a new one. If none has, new clients are
-    refused until one does. Memory stays bounded either way.
+  - At most 10,000 clients are tracked. When the map is full, a new client
+    triggers a sweep that drops buckets that have refilled, since they equal
+    a new one. If none has, the new client is refused. Sweeps run at most
+    once a second, and a client refused between them costs a map lookup, so
+    a stream of new addresses cannot make every request scan the map.
+  - The tradeoff: an attacker holding more than 10,000 addresses (IPv4, or
+    IPv6 /64s), each asking often enough to stay busy, locks out new
+    visitors while it lasts. Clients already tracked are unaffected, and the
+    in-flight cap still bounds what the attack costs. Failing open instead
+    would let the same attacker bypass the rate limit entirely.
 - **Global concurrency cap.** At most `-max-inflight` questions (default 8)
   are answered at once. Past that, `503 unavailable` with `Retry-After: 5`.
   The request is refused immediately, not queued: a queue would hold
   connections open and hide the overload from the client.
 
 `0` disables either guard. The defaults are on, at levels one person at a
-local server will not reach.
+local server will not reach. `server.New`, and so `citebound serve`, refuses
+settings that would silently disable a guard or overflow it: a rate that is
+negative, not finite, or slower than one ask a day, and a negative burst or
+in-flight cap.
 
 ## Consequences
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -23,14 +24,14 @@ func TestLimiter(t *testing.T) {
 			t.Fatalf("ask %d refused within the burst", i)
 		}
 	}
-	if ok, wait := l.allow("a"); ok || wait != time.Second {
+	if ok, wait := l.allow("a"); ok || wait != 1 {
 		t.Fatalf("third ask: ok %v, wait %v; want refused for 1s", ok, wait)
 	}
 	if ok, _ := l.allow("b"); !ok {
 		t.Fatal("another client was refused")
 	}
 	now = now.Add(500 * time.Millisecond)
-	if ok, wait := l.allow("a"); ok || wait != 500*time.Millisecond {
+	if ok, wait := l.allow("a"); ok || wait != 0.5 {
 		t.Fatalf("after 0.5s: ok %v, wait %v; want refused for 0.5s", ok, wait)
 	}
 	now = now.Add(500 * time.Millisecond)
@@ -64,6 +65,84 @@ func TestLimiterBoundsClients(t *testing.T) {
 	}
 	if _, kept := l.clients["0"]; !kept || len(l.clients) != 2 {
 		t.Errorf("after the sweep: %d clients, client 0 kept %v; want 2, true", len(l.clients), kept)
+	}
+}
+
+// A full map of busy clients is swept at most once per sweepEvery, however
+// many new clients ask: each is refused in constant time.
+func TestLimiterSweepsAFullMapRarely(t *testing.T) {
+	now := time.Unix(0, 0)
+	l := newLimiter(1, 1, func() time.Time { return now }) // a token a minute: buckets stay busy
+	for i := range maxClients {
+		l.allow(strconv.Itoa(i))
+	}
+	for i := range 1000 {
+		if ok, _ := l.allow("new" + strconv.Itoa(i)); ok {
+			t.Fatal("a new client was admitted to a full map of busy clients")
+		}
+	}
+	if l.sweeps != 1 {
+		t.Fatalf("1,000 new clients at one instant: %d sweeps, want 1", l.sweeps)
+	}
+	now = now.Add(sweepEvery / 2)
+	l.allow("new")
+	if l.sweeps != 1 {
+		t.Fatalf("within sweepEvery: %d sweeps, want 1", l.sweeps)
+	}
+	now = now.Add(sweepEvery / 2)
+	l.allow("new")
+	if l.sweeps != 2 {
+		t.Fatalf("after sweepEvery: %d sweeps, want 2", l.sweeps)
+	}
+}
+
+func BenchmarkLimiterFullMapNewClient(b *testing.B) {
+	now := time.Unix(0, 0)
+	l := newLimiter(1, 1, func() time.Time { return now })
+	for i := range maxClients {
+		l.allow(strconv.Itoa(i))
+	}
+	for b.Loop() {
+		l.allow("new")
+	}
+}
+
+func TestRetryAfter(t *testing.T) {
+	for secs, want := range map[float64]int{0: 1, 0.2: 1, 1: 1, 1.01: 2, 60: 60, 86400: 86400} {
+		if got := retryAfter(secs); got != want {
+			t.Errorf("retryAfter(%v) = %d, want %d", secs, got, want)
+		}
+	}
+	// At the slowest allowed rate, an empty bucket waits a day.
+	l := newLimiter(minAskRate, 1, time.Now)
+	l.allow("a")
+	if _, wait := l.allow("a"); retryAfter(wait) != 86400 {
+		t.Errorf("slowest rate: Retry-After %d, want 86400", retryAfter(wait))
+	}
+}
+
+func TestGuardSettings(t *testing.T) {
+	for _, c := range []struct {
+		cfg Config
+		ok  bool
+	}{
+		{Config{}, true},
+		{Config{AskRate: 10, AskBurst: 5, MaxInFlight: 8}, true},
+		{Config{AskRate: minAskRate}, true},
+		{Config{AskRate: 1e9}, true},
+		{Config{AskRate: math.NaN()}, false},
+		{Config{AskRate: math.Inf(1)}, false},
+		{Config{AskRate: math.Inf(-1)}, false},
+		{Config{AskRate: -1}, false},
+		{Config{AskRate: minAskRate / 2}, false},
+		{Config{AskRate: 1e-9}, false},
+		{Config{AskBurst: -1}, false},
+		{Config{MaxInFlight: -1}, false},
+	} {
+		c.cfg.Pipeline = &answer.Pipeline{}
+		if _, err := New(c.cfg); (err == nil) != c.ok {
+			t.Errorf("New(rate %v, burst %d, in flight %d): err %v, want ok %v", c.cfg.AskRate, c.cfg.AskBurst, c.cfg.MaxInFlight, err, c.ok)
+		}
 	}
 }
 

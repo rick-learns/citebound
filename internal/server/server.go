@@ -37,7 +37,8 @@ type Config struct {
 	AskTimeout time.Duration
 	Logger     *slog.Logger
 
-	// Guards for a public deployment (decision 0010). Zero disables each.
+	// Guards for a public deployment (decision 0010). Zero disables each;
+	// New rejects negative, non-finite, and slower than daily rates.
 	//
 	// AskRate is how many asks a minute each client may start, in bursts of
 	// up to AskBurst (at least 1).
@@ -68,6 +69,9 @@ type Server struct {
 func New(cfg Config) (*Server, error) {
 	if cfg.Pipeline == nil {
 		return nil, errors.New("server: no pipeline")
+	}
+	if err := cfg.validateGuards(); err != nil {
+		return nil, err
 	}
 	if cfg.AskTimeout == 0 {
 		cfg.AskTimeout = 60 * time.Second

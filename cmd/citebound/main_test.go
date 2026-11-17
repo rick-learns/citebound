@@ -48,6 +48,10 @@ func TestRun(t *testing.T) {
 		{name: "check empty answer", args: []string{"check", "-dir", "../../corpus", "testdata/answer-blank.txt"}, wantCode: 1, wantStderr: "no claims in testdata/answer-blank.txt"},
 		{name: "check missing file", args: []string{"check", "nope.txt"}, wantCode: 1, wantStderr: "nope.txt"},
 		{name: "check without file", args: []string{"check"}, wantCode: 2, wantStderr: "Usage: citebound check"},
+		{name: "serve NaN ask rate", args: []string{"serve", "-dir", "../../corpus", "-ask-rate", "NaN"}, wantCode: 1, wantStderr: "ask rate NaN"},
+		{name: "serve infinite ask rate", args: []string{"serve", "-dir", "../../corpus", "-ask-rate", "+Inf"}, wantCode: 1, wantStderr: "ask rate +Inf"},
+		{name: "serve negative ask rate", args: []string{"serve", "-dir", "../../corpus", "-ask-rate", "-1"}, wantCode: 1, wantStderr: "ask rate -1"},
+		{name: "serve negative in flight", args: []string{"serve", "-dir", "../../corpus", "-max-inflight", "-1"}, wantCode: 1, wantStderr: "max in flight"},
 		{name: "eval without subcommand", args: []string{"eval"}, wantCode: 2, wantStderr: "Usage: citebound eval retrieval"},
 		{name: "corpus without subcommand", args: []string{"corpus"}, wantCode: 2, wantStderr: "corpus verify"},
 	}
