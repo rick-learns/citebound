@@ -249,12 +249,15 @@ async function network<T>(
   }
 }
 
-/** Reads a JSON body, or null if it is not JSON. An abort while reading is rethrown. */
+/**
+ * Reads a JSON body, or null if it is not JSON. A failure while reading is ApiError "network",
+ * and an abort is rethrown.
+ */
 async function readJson(res: Response, signal: AbortSignal | null | undefined): Promise<unknown> {
+  const text = await network(() => res.text(), signal);
   try {
-    return (await res.json()) as unknown;
-  } catch (err) {
-    if (isAbort(err, signal)) throw err;
+    return JSON.parse(text) as unknown;
+  } catch {
     return null;
   }
 }

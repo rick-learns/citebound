@@ -144,10 +144,25 @@ describe("askStream", () => {
     await expect(collect("q", ctrl.signal)).rejects.toMatchObject({ name: "AbortError" });
   });
 
+  it("reports a body that fails while reading as a network error", async () => {
+    const failing = () =>
+      new Response(
+        new ReadableStream({
+          pull(ctrl) {
+            ctrl.error(new TypeError("connection reset"));
+          },
+        }),
+        { status: 503 },
+      );
+    vi.stubGlobal("fetch", () => Promise.resolve(failing()));
+    await expect(fetchMeta()).rejects.toEqual(new ApiError("network", "connection reset"));
+    await expect(collect("q")).rejects.toEqual(new ApiError("network", "connection reset"));
+  });
+
   it("keeps an abort while reading a body as an abort", async () => {
     const ctrl = new AbortController();
     const res = new Response("{}", { status: 404 });
-    vi.spyOn(res, "json").mockImplementation(() => {
+    vi.spyOn(res, "text").mockImplementation(() => {
       ctrl.abort();
       return Promise.reject(new DOMException("aborted", "AbortError"));
     });
