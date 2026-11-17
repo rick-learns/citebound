@@ -221,6 +221,11 @@ body {
   line-height: 1.5;
   resize: vertical;
 }
+/* Browsers default to a grey that fails AA contrast on the dark surface; --muted passes in both. */
+.ask textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
 .ask textarea:focus-visible {
   outline: none; /* the box draws the ring */
 }
