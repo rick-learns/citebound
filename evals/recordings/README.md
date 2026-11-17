@@ -6,7 +6,7 @@ tests, the demo, and CI. See
 
 | File | Model | Recorded | Answers |
 | --- | --- | --- | --- |
-| [`nemotron-3-ultra.jsonl`](nemotron-3-ultra.jsonl) | `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free` | 2026-11-17 | 19 |
+| [`nemotron-3-ultra.jsonl`](nemotron-3-ultra.jsonl) | `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free` | 2026-11-17 | 180 |
 
 Each line holds the full request (the system prompt, the question, and the
 retrieved passages) and the model's reply. API keys are never recorded.
@@ -16,9 +16,11 @@ retrieved passages) and the model's reply. API keys are never recorded.
 - **10 demo questions.** Eight are answerable from the corpus. One is off topic
   (sourdough bread), and one has a false premise (that RFC 6749 makes the
   implicit grant mandatory).
-- **9 fake-citation prompts** from the red-team set. They ask for sections
-  that do not exist, such as RFC 9999 §3, or ask for quotes that do not exist,
-  such as RFC 7636 calling S256 NOT RECOMMENDED.
+- **Every eval question:** the 100 answerable questions, the 30 unanswerable
+  ones, and the 40 red-team prompts in [`evals/`](../README.md). These include
+  the fake-citation prompts, which ask for sections that do not exist, such as
+  RFC 9999 §3, or for quotes that do not exist, such as RFC 7636 calling S256
+  NOT RECOMMENDED.
 
 Replay any of them by asking the same question:
 
@@ -37,8 +39,18 @@ key.
 - **Synthesis with citations.** Answers on refresh-token binding, the implicit
   grant, and introspection authentication combine verified claims from two or
   three RFCs.
-- **Refusal.** The model abstained on the off-topic question, the false
-  premise, and all nine fake-citation prompts.
+- **Refusal.** The model abstained on every unanswerable question, every
+  false premise, and every fake-citation prompt. It also abstained on 14 of
+  the 100 answerable questions.
+- **No invented quotes yet.** Of 206 claims, three were struck, and none of
+  the three is an invented quote:
+  - For RFC 9449 §10 ¶4, the model quoted a real figure but JSON-escaped it:
+    each line-continuation backslash and line break became the literal text
+    `\\\n`. It was struck as `quote-not-found`, so a real quote was
+    rejected.
+  - Two claims were struck as `uncited`. Both replies hit the 4,096-token
+    limit (`"truncated": true` in the recording) and stop mid-sentence, one
+    inside a quote and one before its citation.
 - **Escaped double quotes.** For "What claims must a JWT access token
   contain?", all three quotes are real RFC 9068 text that contains double
   quotes (`"aud"`). The model escaped them as `\"aud\"`, even though the
