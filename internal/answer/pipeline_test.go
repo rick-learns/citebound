@@ -23,7 +23,8 @@ func (f fakeSearcher) Search(context.Context, string, int) ([]index.Hit, error) 
 
 type fixedAnswer struct {
 	text    string
-	in, out int // tokens
+	in, out int  // tokens
+	calls   *int // counts calls, when set
 	err     error
 }
 
@@ -31,21 +32,32 @@ type fixedAnswer struct {
 func textOf(r Reply, err error) (string, error) { return r.Text, err }
 
 func (f fixedAnswer) Answer(context.Context, string, []index.Hit) (Reply, error) {
+	if f.calls != nil {
+		*f.calls++
+	}
 	return Reply{Text: f.text, InputTokens: f.in, OutputTokens: f.out}, f.err
 }
 
 func TestPipelineReportsTokens(t *testing.T) {
 	para := "Refresh tokens MUST be kept confidential in transit and storage."
 	hits := []index.Hit{hit("RFC1 §1 ¶1", para, false)}
-	a := fixedAnswer{text: `Secret. [RFC1 §1 ¶1: "MUST be kept confidential in transit"]`, in: 1631, out: 2110}
-	p := &Pipeline{Index: fakeSearcher{hits: hits}, Lookup: mapLookup{"RFC1 §1 ¶1": para}, Answerer: a, Policy: DefaultPolicy}
-	res, err := p.Ask(context.Background(), "q", nil)
-	if err != nil || res.InputTokens != 1631 || res.OutputTokens != 2110 {
-		t.Errorf("answered: tokens %d in, %d out, err %v; want 1631, 2110", res.InputTokens, res.OutputTokens, err)
+	// An abstention still reports the tokens the answerer used.
+	for name, text := range map[string]string{
+		"answered":          `Secret. [RFC1 §1 ¶1: "MUST be kept confidential in transit"]`,
+		"answerer abstains": verify.AbstainMarker,
+		"all struck":        `Public. [RFC1 §1 ¶1: "MAY be shared with anyone at all"]`,
+	} {
+		a := fixedAnswer{text: text, in: 1631, out: 2110}
+		p := &Pipeline{Index: fakeSearcher{hits: hits}, Lookup: mapLookup{"RFC1 §1 ¶1": para}, Answerer: a, Policy: DefaultPolicy}
+		res, err := p.Ask(context.Background(), "q", nil)
+		if err != nil || res.InputTokens != 1631 || res.OutputTokens != 2110 {
+			t.Errorf("%s: tokens %d in, %d out, err %v; want 1631, 2110", name, res.InputTokens, res.OutputTokens, err)
+		}
 	}
-	p.Index = fakeSearcher{} // no passages: the answerer is never asked
-	if res, _ := p.Ask(context.Background(), "q", nil); res.InputTokens != 0 || res.OutputTokens != 0 {
-		t.Errorf("no passages: tokens %d in, %d out; want 0", res.InputTokens, res.OutputTokens)
+	calls := 0
+	p := &Pipeline{Index: fakeSearcher{}, Answerer: fixedAnswer{in: 1631, out: 2110, calls: &calls}, Policy: DefaultPolicy}
+	if res, _ := p.Ask(context.Background(), "q", nil); res.InputTokens != 0 || res.OutputTokens != 0 || calls != 0 {
+		t.Errorf("no passages: tokens %d in, %d out, %d answerer calls; want 0", res.InputTokens, res.OutputTokens, calls)
 	}
 }
 
